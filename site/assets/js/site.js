@@ -606,18 +606,29 @@
     const copy = $$('[data-rise], .eyebrow, .display, .h1, .h2, .h3, .h4, .lede, .brush, .btn, .link-underline, .filters, .refine, .table, .acc', sec)
       .filter((el) => !inBlock(el) && !el.closest('[data-split]'));
 
+    /* A phone gets the same choreography at roughly a third of the duration and
+       with no clip-path masking. A 1.25s unmask cannot keep up with a thumb
+       flick — you scroll past a section faster than it can finish arriving, and
+       what you see is a blank band. Shorter, and starting earlier, fixes it. */
+    const fast = isPhone();
     const tl = gsap.timeline(
-      immediate ? {} : { scrollTrigger: { trigger: sec, start: 'top 82%', once: true } }
+      immediate ? {} : { scrollTrigger: { trigger: sec, start: fast ? 'top 97%' : 'top 82%', once: true } }
     );
 
-    if (chars.length) tl.fromTo(chars, { yPercent: 116, opacity: 0 },
-      { yPercent: 0, opacity: 1, duration: 1.1, ease: 'expo.out', stagger: { amount: 0.45 } }, 0);
-    if (copy.length) tl.fromTo(copy, { y: 46, opacity: 0 },
-      { y: 0, opacity: 1, duration: 1.1, ease: 'expo.out', stagger: 0.06 }, 0.04);
-    if (blocks.length) tl.fromTo(blocks, { y: 64, opacity: 0 },
-      { y: 0, opacity: 1, duration: 1.15, ease: 'expo.out', stagger: { amount: Math.min(0.55, blocks.length * 0.07) } }, 0.1);
-    if (frames.length) tl.fromTo(frames, { clipPath: 'inset(0% 0% 100% 0%)' },
-      { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.25, ease: 'expo.out', stagger: { amount: Math.min(0.5, frames.length * 0.06) } }, 0.12);
+    if (chars.length) tl.fromTo(chars, { yPercent: fast ? 60 : 116, opacity: 0 },
+      { yPercent: 0, opacity: 1, duration: fast ? 0.5 : 1.1, ease: 'expo.out',
+        stagger: { amount: fast ? 0.2 : 0.45 } }, 0);
+    if (copy.length) tl.fromTo(copy, { y: fast ? 20 : 46, opacity: 0 },
+      { y: 0, opacity: 1, duration: fast ? 0.45 : 1.1, ease: 'expo.out', stagger: fast ? 0.03 : 0.06 }, 0.04);
+    if (blocks.length) tl.fromTo(blocks, { y: fast ? 26 : 64, opacity: 0 },
+      { y: 0, opacity: 1, duration: fast ? 0.5 : 1.15, ease: 'expo.out',
+        stagger: { amount: Math.min(fast ? 0.22 : 0.55, blocks.length * 0.07) } }, fast ? 0.02 : 0.1);
+    if (frames.length) {
+      if (fast) tl.fromTo(frames, { opacity: 0 }, { opacity: 1, duration: 0.4, ease: 'power2.out', stagger: { amount: 0.18 } }, 0.02);
+      else tl.fromTo(frames, { clipPath: 'inset(0% 0% 100% 0%)' },
+        { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.25, ease: 'expo.out',
+          stagger: { amount: Math.min(0.5, frames.length * 0.06) } }, 0.12);
+    }
 
     return tl;
   }
@@ -648,6 +659,7 @@
     $$('[data-curtain]', R).forEach((el) => {
       if (el.dataset.curtained) return;
       el.dataset.curtained = '1';
+      if (isPhone()) { gsap.set(el, { clipPath: 'none' }); return; }
       gsap.fromTo(el, { clipPath: 'inset(0% 50% 0% 50%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.3, ease: 'expo.out',
         scrollTrigger: { trigger: el, start: 'top 86%', once: true } });
     });
@@ -696,7 +708,12 @@
       /* Pinning on a phone means the browser recalculates layout on every
          scroll frame — the single biggest cause of stutter. Below the tablet
          breakpoint the rail just scrolls horizontally by touch instead. */
-      if (isPhone()) { section.classList.add('rail--swipe'); return; }
+      if (isPhone()) {
+        section.classList.add('rail--swipe');
+        const hint = $('.rail__head p', section);
+        if (hint) hint.textContent = 'Swipe →';
+        return;
+      }
       gsap.to(track, {
         x: () => -distance(), ease: 'none',
         scrollTrigger: {

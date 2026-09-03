@@ -444,7 +444,8 @@ button { font: inherit; color: inherit; }
   .lookgrid { grid-template-columns: repeat(2, 1fr); }
   .lookgrid > .look:nth-child(9n + 1) { grid-column: span 2; grid-row: auto; aspect-ratio: 4 / 3; }
   .manifesto-row { grid-template-columns: 1fr; gap: var(--space-3); }
-  .section { padding-block: var(--space-8); }
+  .section { padding-block: var(--space-7); }
+  .rail { padding-block: var(--space-6); }
   .hero__body { padding-inline: var(--space-5); }
   .hero__scroll { display: none; }
   .kitstrip { grid-template-columns: repeat(2, 1fr); }
@@ -452,8 +453,14 @@ button { font: inherit; color: inherit; }
   .pdp__specrow { grid-template-columns: 1fr; gap: var(--space-1); }
 }
 @media (max-width: 560px) {
-  .grid--4, .grid--3, .grid--split { grid-template-columns: 1fr; }
-  .stats { grid-template-columns: 1fr; }
+  /* Deliberately NOT 1fr: a single column of 3:4 cards made the home page
+     13,462px tall on a 393px phone, which is the "so much space" problem. */
+  .grid--4, .grid--3 { grid-template-columns: repeat(2, 1fr); gap: var(--space-4); }
+  .grid--split { grid-template-columns: 1fr; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .card__name { font-size: var(--text-body); }
+  .card__meta { flex-direction: column; gap: var(--space-1); }
+  .card__price { font-size: var(--text-caption); }
   .bagline { grid-template-columns: 84px 1fr auto; }
   .footer__cols { grid-template-columns: 1fr; }
 }
