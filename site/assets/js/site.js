@@ -240,19 +240,65 @@
       }));
 
       if (!ANIM) return;
-      clauses.forEach((cl, i) => {
+
+      clauses.forEach((cl) => {
         gsap.fromTo($('.clause__rule', cl), { scaleX: 0 }, { scaleX: 1, duration: 1.2, ease: 'expo.out',
           scrollTrigger: { trigger: cl, start: 'top 78%', once: true } });
-        ScrollTrigger.create({
-          trigger: cl, start: 'top 50%', end: 'bottom 50%',
-          onToggle: (self) => {
-            cl.classList.toggle('is-on', self.isActive);
-            bars[i].classList.toggle('is-on', self.isActive);
-          },
-          onEnter: () => bars.slice(0, i + 1).forEach((b) => b.classList.add('is-read')),
-          onLeaveBack: () => bars[i].classList.remove('is-read'),
-        });
       });
+
+      /* Nearest-to-the-middle wins, rather than one trigger window per clause:
+         the clauses are spaced apart, so straddle windows leave gaps where no
+         clause is current and the indicator blinks off. Exactly one bar is
+         always lit. */
+      let current = -1;
+      const sync = () => {
+        const mid = window.innerHeight / 2;
+        let best = 0, bestDist = Infinity;
+        clauses.forEach((cl, i) => {
+          const r = cl.getBoundingClientRect();
+          const d = Math.abs(r.top + r.height / 2 - mid);
+          if (d < bestDist) { bestDist = d; best = i; }
+        });
+        if (best === current) return;
+        current = best;
+        clauses.forEach((cl, i) => cl.classList.toggle('is-on', i === best));
+        bars.forEach((b, i) => {
+          b.classList.toggle('is-on', i === best);
+          b.classList.toggle('is-read', i < best);
+        });
+      };
+      ScrollTrigger.create({ trigger: node, start: 'top bottom', end: 'bottom top', onUpdate: sync, onRefresh: sync });
+      sync();
+    },
+
+    press(node) {
+      node.innerHTML = D.PRESS.map((q) => `<figure class="press" data-block>
+          <blockquote class="press__quote">“${esc(q.quote)}”</blockquote>
+          <figcaption class="press__src">${esc(q.source)} · ${esc(q.year)}</figcaption>
+        </figure>`).join('');
+    },
+
+    stockists(node) {
+      node.innerHTML = D.STOCKISTS.map((s) => `<div class="stockist${s.primary ? ' stockist--primary' : ''}" data-block>
+          <p class="stockist__city">${esc(s.city)}</p>
+          <p class="h4">${esc(s.place)}</p>
+          <p class="small" style="margin-top:var(--space-2)">${esc(s.detail)}</p>
+        </div>`).join('');
+    },
+
+    gallery(node) {
+      const shots = [
+        ['ctx-workshop-01.jpg', 'The Tunis cutting floor'],
+        ['ctx-sketches.jpg', 'First drawings for Structured Chaos'],
+        ['ctx-workshop-02.jpg', 'Finishing, by hand'],
+        ['ctx-venue-01.jpg', 'The Milan venue, before'],
+        ['ctx-interior.jpg', 'Front of house'],
+        ['ctx-exhibition.jpg', 'Exhibition, Lisbon'],
+      ];
+      node.innerHTML = shots.map(([f, cap]) => `<figure class="media media--4x3 look" data-reveal-media>
+          <span class="media__inner"><img src="${D.MEDIA + f}" alt="${esc(cap)}" loading="lazy"></span>
+          <figcaption class="look__cap">${esc(cap)}</figcaption>
+        </figure>`).join('');
     },
 
     socials(node) {
@@ -684,17 +730,25 @@
     const film = $('.hero__film', hero);
     const body = $('.hero__body', hero);
 
-    gsap.fromTo(film, { scale: 1.5, filter: 'blur(14px)' }, { scale: 1.06, filter: 'blur(0px)', duration: 2, ease: 'expo.out' });
+    /* The intro runs on the media element INSIDE .hero__film, never on
+       .hero__film itself. They used to share `scale`: ScrollTrigger.refresh()
+       (fired once images finish loading) re-recorded the scrubbed timeline's
+       start while the 2s intro was mid-flight, captured 1.5 as the resting
+       scale, and locked the hero at 1.5x — a giant crop that never resolved. */
+    const inner = $('video, img', film) || film;
+    gsap.fromTo(inner, { scale: 1.35, filter: 'blur(16px)' },
+      { scale: 1, filter: 'blur(0px)', duration: 2, ease: 'expo.out' });
     gsap.fromTo($$('.hero__body > *', hero), { y: 80, opacity: 0 },
       { y: 0, opacity: 1, duration: 1.3, ease: 'expo.out', stagger: 0.1, delay: 0.2 });
     gsap.fromTo($('.hero__scroll', hero), { opacity: 0 }, { opacity: 1, duration: 0.8, delay: 1.4 });
 
     const tl = gsap.timeline({
-      scrollTrigger: { trigger: hero, start: 'top top', end: '+=' + Math.round(window.innerHeight * 1.15), pin: true, scrub: 0.7, anticipatePin: 1, invalidateOnRefresh: true },
+      scrollTrigger: { trigger: hero, start: 'top top', end: '+=' + Math.round(window.innerHeight * 1.15),
+        pin: true, scrub: 0.7, anticipatePin: 1, invalidateOnRefresh: true },
     });
-    tl.to(media, { clipPath: 'inset(12% 14% 12% 14%)', ease: 'none' }, 0)
-      .to(film, { scale: 1.24, ease: 'none' }, 0)
-      .to(body, { yPercent: -70, opacity: 0, ease: 'none' }, 0)
+    tl.fromTo(media, { clipPath: 'inset(0% 0% 0% 0%)' }, { clipPath: 'inset(12% 14% 12% 14%)', ease: 'none', immediateRender: false }, 0)
+      .fromTo(film, { scale: 1 }, { scale: 1.18, ease: 'none', immediateRender: false }, 0)
+      .fromTo(body, { yPercent: 0, opacity: 1 }, { yPercent: -70, opacity: 0, ease: 'none', immediateRender: false }, 0)
       .to($('.hero__scroll', hero), { opacity: 0, ease: 'none' }, 0);
   }
 

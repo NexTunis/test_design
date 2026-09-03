@@ -160,6 +160,21 @@ window.DYSOBAY = (function () {
       images: img('kit-brush-x.jpg', 'kit-woven-wordmark.jpg', 'kit-barcode.jpg'),
       note: 'The painted ✕, screen-printed once onto silk and hand-rolled at the edge. The registration is off by a millimetre and stays that way.',
       material: 'Silk twill, hand-rolled', lining: 'None', atelier: 'Dysobay studio, Dubai', hours: 9 }),
+
+    P({ id: 'rayures-tote', name: 'Rayures Tote', price: 1250, size: '38 × 34 cm', tag: 'New Drop', status: 'in-stock', category: 'Accessories', collection: 'atelier', piece: '081 / 1',
+      images: img('kit-tote-stripe.jpg', 'kit-tote-blue.jpg', 'kit-x-blue.jpg'),
+      note: 'Woven in the house stripe and finished with the painted ✕ — applied once, by hand, so the registration is a millimetre out and stays that way.',
+      material: 'Woven cotton canvas, leather handles', lining: 'Unlined', atelier: 'Dysobay studio, Dubai', hours: 11 }),
+
+    P({ id: 'dx-cardholder', name: 'D✕ Card Holder', price: 640, size: '10 × 7 cm', status: 'in-stock', category: 'Accessories', collection: 'atelier', piece: '084 / 1',
+      images: img('kit-card-orange.jpg', 'kit-card-blue.jpg', 'kit-woven-dx.jpg'),
+      note: 'Four card slots, one painted mark, no logo stamp. The colour is whichever of the two the studio had open that week.',
+      material: 'Vegetable-tanned calf', lining: 'Suede', atelier: 'Dysobay studio, Dubai', hours: 6 }),
+
+    P({ id: 'barcode-scarf', name: 'Barcode Scarf', price: 780, size: '140 × 24 cm', status: 'last-piece', tag: 'Last Piece', category: 'Accessories', collection: 'atelier', piece: '087 / 1',
+      images: img('kit-barcode-alt.jpg', 'kit-barcode.jpg', 'kit-wordmark-vertical.jpg'),
+      note: 'The barcode that is not a barcode, printed the full length of a narrow silk stole and hand-rolled at both ends.',
+      material: 'Silk twill, hand-rolled', lining: 'None', atelier: 'Atelier Rania, Tunis', hours: 13 }),
   ];
 
   /* ── Lookbook: chapters, not a flat wall of images ─────────────── */
@@ -196,6 +211,14 @@ window.DYSOBAY = (function () {
     { src: M + 'look-noir-02.jpg', caption: 'First Refusal — look 04b', collection: 'debut' },
     { src: M + 'ed-nothing-to-see.jpg', caption: 'First Refusal — backstage', collection: 'debut' },
     { src: M + 'ed-well-dressed.jpg', caption: 'Atelier Series — 066', collection: 'atelier' },
+    { src: M + 'ctx-workshop-01.jpg', caption: 'Atelier Series — the Tunis workshop', collection: 'atelier' },
+    { src: M + 'ctx-workshop-02.jpg', caption: 'Atelier Series — cutting floor', collection: 'atelier' },
+    { src: M + 'ctx-sketches.jpg', caption: 'Structured Chaos — first drawings', collection: 'structured-chaos' },
+    { src: M + 'ctx-venue-01.jpg', caption: 'First Refusal — the venue, Milan', collection: 'debut' },
+    { src: M + 'ctx-interior.jpg', caption: 'First Refusal — front of house', collection: 'debut' },
+    { src: M + 'ed-spray-mark.jpg', caption: 'Color Disobedience — print study', collection: 'disobedience' },
+    { src: M + 'kit-tote-stripe.jpg', caption: 'Atelier Series — 081', collection: 'atelier' },
+    { src: M + 'ctx-exhibition.jpg', caption: 'Atelier Series — exhibition, Lisbon', collection: 'atelier' },
   ];
 
   const JOURNAL = [
@@ -215,8 +238,14 @@ window.DYSOBAY = (function () {
       excerpt: 'Most printed clothing is cut first and printed to fit. We do it the other way round, and the seams have to accept the result.' },
     { id: 'sizing', title: 'On making one size',  date: 'Jan 2026', read: '5 min', image: M + 'kit-swatches.jpg',
       excerpt: 'A single-size garment sounds like a limitation. In an atelier it is the opposite — here is what it buys you.' },
-    { id: 'leaving', title: 'Leaving the nine-to-five', date: 'Oct 2024', read: '9 min', image: M + 'editorial-9to5.jpg',
+    { id: 'leaving', title: 'Leaving the nine-to-five', date: 'Oct 2024', read: '9 min', image: M + 'portrait-haifa.jpg',
       excerpt: 'Haifa on the decision that started the label, and the two years between quitting and the first Milan show.' },
+    { id: 'venue', title: 'Choosing a room, not a runway', date: 'Jul 2026', read: '5 min', image: M + 'ctx-venue-01.jpg',
+      excerpt: 'Three shows, three rooms that were not built for fashion. What a disused space does to twelve garments that only exist once.' },
+    { id: 'drawing', title: 'The drawing has to be right', date: 'May 2026', read: '6 min', image: M + 'ctx-sketches.jpg',
+      excerpt: 'With no second sample, the sketch stops being a suggestion. A look at what changes when you cannot iterate.' },
+    { id: 'pricing', title: 'What a one-of-one costs', date: 'Dec 2025', read: '7 min', image: M + 'kit-invoice.jpg',
+      excerpt: 'Every price on this site is hours multiplied by a rate, plus materials. Here is the whole calculation, with nothing removed.' },
   ];
 
 
@@ -309,7 +338,37 @@ window.DYSOBAY = (function () {
       ['p', 'Six months of pattern-cutting classes. A year of finding workshops that would take an order of one and not treat it as an insult — most would not, and the two that did are the two we still work with. Four months of making things that were not good enough and one month of making three that were.'],
       ['p', 'The label existed as a rule before it existed as a garment: one design, one piece, never repeated. Everything since has been an argument for keeping that rule when it would be easier not to.'],
       ['h', 'What it is now'],
-      ['p', 'Three Milan showings, twenty-eight pieces in the archive, eleven people making them, and zero restocks. The last number is the only one that took discipline.'],
+      ['p', 'Three Milan showings, thirty-one pieces in the archive, eleven people making them, and zero restocks. The last number is the only one that took discipline.'],
+    ],
+    venue: [
+      ['p', 'None of the three shows happened in a room built for fashion. The debut was in a disused printworks, Color Disobedience in a car park below an office block, and the third in a warehouse that still had the previous tenant\u2019s racking bolted to the ceiling.'],
+      ['p', 'That is partly budget and mostly deliberate. A purpose-built runway flatters everything equally, which is a problem when the point of the collection is that no two pieces are alike.'],
+      ['q', 'A room with something wrong with it makes you look at the clothes rather than the production.'],
+      ['h', 'What the room does'],
+      ['p', 'Concrete eats sound, so the audience hears the garment: the weight of the Ultramarine Coat hitting the floor on the turn, the Chrome Column moving against itself. In a carpeted venue with a sound system you hear none of that.'],
+      ['p', 'Bad light is harder. Two of the three rooms had no usable daylight, which is why the Color Disobedience palette went as saturated as it did — the colours had to survive being lit badly on purpose.'],
+      ['h', 'Twelve garments in a big empty space'],
+      ['p', 'The risk of a raw venue is that a small collection looks thin in it. The answer was to stop trying to fill the room: the third show used a nine-metre walk in a forty-metre space and let the emptiness do the work. One garment at a time, a long way from anything else.'],
+    ],
+    drawing: [
+      ['p', 'In a normal development cycle the drawing is a proposal. You sample it, the sample is wrong, you correct it, and the third one goes into production. The drawing is allowed to be approximate because the process will find the error.'],
+      ['p', 'We do not get that. There is one length of the cloth, and cutting it is irreversible. The drawing has to be right before the scissors come out.'],
+      ['q', 'You cannot iterate on a thing there is only one of. So you iterate on paper until the paper is the garment.'],
+      ['h', 'What changes'],
+      ['p', 'Drawings get much slower and much more specific. A sketch that would take twenty minutes in a normal studio takes two days here, because it has to carry the seam plan, the grain direction, the exact drop of the hem and where the pattern falls on the body. By the end it is less a sketch than a set of instructions.'],
+      ['p', 'Toiles do the rest. We make them in cheap calico, sometimes four or five, and those are the iterations — the garment gets to be wrong repeatedly in a fabric nobody will ever see.'],
+      ['h', 'When it still goes wrong'],
+      ['p', 'Twice. The first time we lost a hand-painted silk faille and the painting could not be repeated. The second time the error was in the drawing and we caught it in calico, which is the system working. The first one is the reason the system exists.'],
+    ],
+    pricing: [
+      ['p', 'Every price on this site is hours multiplied by a rate, plus materials, plus a margin that keeps the studio open. There is no brand premium in the number because there is no brand to charge for yet.'],
+      ['h', 'The calculation'],
+      ['p', 'Take the Warda Coat at AED 5,600. Forty-six hours of skilled labour at the rate our Dubai atelier charges is the largest single line. Coated nylon and bonded interlining, cut for one garment rather than bought by the roll, is the second. Then the hangtag, the box, the authenticity card, the shipping we include, and the alteration we have promised.'],
+      ['p', 'What is left funds the next thing: pattern development, toiles, the two or three drawings that never become garments.'],
+      ['q', 'A coat that took forty-six hours is not expensive. It is accurately costed.'],
+      ['h', 'Why the hours are printed'],
+      ['p', 'Publishing the hours on every product page removes an option we would otherwise be tempted by. You cannot discount a garment by forty per cent in a seasonal sale when the page says how long somebody spent making it — the number makes the insult explicit.'],
+      ['p', 'It also answers the question everyone actually has. AED 890 for a scarf sounds like a lot until you read that it is nine hours, and then it sounds like nine hours.'],
     ],
   };
 
@@ -338,6 +397,26 @@ window.DYSOBAY = (function () {
   ];
 
   /* ── Services surfaced on the product page ─────────────────────── */
+
+  /* Press and stockists — the two things a buyer looks for and a lookbook
+     never answers. */
+  const PRESS = [
+    { quote: 'The only label in Milan this season whose scarcity is a fact rather than a marketing position.', source: 'Vogue Arabia', year: '2026' },
+    { quote: 'Ghodhbane makes one of everything and dares you to find that inconvenient.', source: 'Harper’s Bazaar Arabia', year: '2025' },
+    { quote: 'Structured Chaos was the best-argued collection on a schedule full of restatements.', source: 'Business of Fashion', year: '2026' },
+    { quote: 'A production model that should not work, run by somebody who has clearly done the arithmetic.', source: 'The National', year: '2025' },
+    { quote: 'Colour used as a refusal rather than a trend.', source: 'i-D', year: '2025' },
+    { quote: 'The hangtag is a joke about barcodes. The clothes are not joking at all.', source: 'Gulf News', year: '2024' },
+  ];
+
+  const STOCKISTS = [
+    { city: 'Dubai', place: 'The studio, Al Quoz 1', detail: 'By appointment, weekdays. Every piece in the archive is here.', primary: true },
+    { city: 'Milan', place: 'Via Tortona showroom', detail: 'Fashion Week only — September and February.' },
+    { city: 'Paris', place: 'Le Marais, by request', detail: 'A rotating selection of four to six pieces.' },
+    { city: 'Tunis', place: 'Atelier Rania', detail: 'Made-to-measure consultations, not retail.' },
+    { city: 'Worldwide', place: 'dysobay.com', detail: 'Express shipping included, duties settled at checkout.' },
+  ];
+
   const SERVICES = [
     { title: 'Worldwide express shipping', body: 'Included on every order, sent from Dubai within 3–5 working days. Duties and taxes settled at checkout — nothing arrives with a bill attached.', meta: 'Included' },
     { title: 'One alteration, on us', body: 'Sleeve, hem or waist adjusted by the atelier that made the piece. Send it back within 60 days and we cover the shipping both ways.', meta: '60 days' },
@@ -360,7 +439,7 @@ window.DYSOBAY = (function () {
   /* Counters for the stats band — value, suffix, label. */
   const STATS = [
     { value: 3, label: 'Milan Fashion Week showings', suffix: '' },
-    { value: 28, label: 'Pieces in the current archive', suffix: '' },
+    { value: 31, label: 'Pieces in the current archive', suffix: '' },
     { value: 1, label: 'Of every design ever made', suffix: '' },
     { value: 0, label: 'Restocks, since the first show', suffix: '' },
   ];
@@ -376,5 +455,5 @@ window.DYSOBAY = (function () {
   const AED = (n) => 'AED ' + n.toLocaleString('en-US');
   const collectionOf = (id) => COLLECTIONS.find((c) => c.id === id) || COLLECTIONS[0];
 
-  return { PRODUCTS, LOOKBOOK, JOURNAL, ARTICLE_BODIES, SOCIALS, FAQS, CATEGORIES, COLLECTIONS, MANIFESTO, SERVICES, STATS, SIZES, AED, collectionOf, MEDIA: M };
+  return { PRODUCTS, LOOKBOOK, JOURNAL, ARTICLE_BODIES, SOCIALS, PRESS, STOCKISTS, FAQS, CATEGORIES, COLLECTIONS, MANIFESTO, SERVICES, STATS, SIZES, AED, collectionOf, MEDIA: M };
 })();
