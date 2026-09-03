@@ -1,10 +1,9 @@
-# Publishes the repository root to GitHub Pages.
-#
-# Only runs when Settings -> Pages -> Source is set to "GitHub Actions". If it
-# is set to "Deploy from a branch" (main / root) instead, that path works too
-# and this workflow simply does nothing useful - either way the site is served
-# from the repo root, where .nojekyll keeps _ds_bundle.js from being dropped.
 name: Deploy to GitHub Pages
+
+# Runs when Settings > Pages > Source is "GitHub Actions". With the
+# "Deploy from a branch" setting (main / root) the site is served the same way
+# and this workflow is simply redundant. Either path serves the repo root,
+# where .nojekyll keeps _ds_bundle.js from being dropped by Jekyll.
 
 on:
   push:
@@ -16,7 +15,6 @@ permissions:
   pages: write
   id-token: write
 
-# Never cancel a running deploy; queue behind it instead.
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -28,14 +26,17 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/configure-pages@v5
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
 
-      # No build step: the storefront is plain HTML/CSS/JS with CDN deps.
-      - uses: actions/upload-pages-artifact@v3
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
         with:
           path: .
 
-      - id: deployment
+      - name: Deploy
+        id: deployment
         uses: actions/deploy-pages@v4

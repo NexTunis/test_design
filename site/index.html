@@ -21,11 +21,11 @@
     <a class="nav__link" href="journal.html">Journal</a>
     <a class="nav__link" href="about.html">About</a>
     <a class="nav__link" href="contact.html">Contact</a>
-    <a class="nav__link nav__link--mobile" href="search.html">Search</a>
+    <a class="nav__link nav__link--mobile" href="search.html" data-open-search>Search</a>
     <a class="nav__link nav__link--mobile" href="wishlist.html">Wishlist</a>
   </nav>
   <div class="nav__utils">
-    <a class="nav__link nav__link--desktop" href="search.html">Search</a>
+    <a class="nav__link nav__link--desktop" href="search.html" data-open-search>Search</a>
     <a class="nav__link nav__link--desktop" href="wishlist.html">Wishlist<span class="nav__count" data-wishlist-count></span></a>
     <a class="nav__link" href="cart.html">Bag<span class="nav__count" data-bag-count></span></a>
   </div>
@@ -34,7 +34,13 @@
 <main data-barba="container" data-barba-namespace="home" data-title="Dysobay — One design. One piece. Never repeated.">
 <section class="hero">
   <div class="hero__media">
-    <img src="media/hero-runway.gif" alt="A Dysobay look walking the runway" fetchpriority="high">
+    <div class="hero__film">
+      <video autoplay muted loop playsinline poster="media/hero-catwalk-poster.jpg" aria-label="A look walking the catwalk">
+        <source src="media/hero-catwalk.webm" type="video/webm">
+        <source src="media/hero-catwalk.mp4" type="video/mp4">
+        <img src="media/hero-catwalk.gif" alt="A look walking the catwalk">
+      </video>
+    </div>
   </div>
   <div class="hero__grain"></div>
   <div class="hero__scrim"></div>
@@ -42,8 +48,8 @@
     <p class="eyebrow" style="color:var(--paper)">Dubai · Milan Fashion Week, three times</p>
     <h1 class="hero__title">One design. One piece. Never repeated.</h1>
     <div class="hero__actions">
-      <a class="btn btn--onDark btn--lg" href="collections.html">Shop the collection</a>
-      <a class="btn btn--lg" style="--btn-bg:transparent;--btn-fg:var(--paper);--btn-bd:var(--paper)" href="manifesto.html">Read the manifesto</a>
+      <a class="btn btn--onDark btn--lg" data-magnetic href="collections.html">Shop the collection</a>
+      <a class="btn btn--lg" data-magnetic style="--btn-bg:transparent;--btn-fg:var(--paper);--btn-bd:var(--paper)" href="manifesto.html">Read the manifesto</a>
     </div>
   </div>
   <span class="hero__scroll">Scroll</span>
@@ -65,8 +71,8 @@
       <h2 class="h1" data-split>Why do you dress? Why do you choose? Why do you stand apart? Your clothes should answer.</h2>
       <p><a class="link-underline" href="manifesto.html">Read the full manifesto</a></p>
     </div>
-    <a href="manifesto.html" class="media media--3x4" data-reveal-media>
-      <img src="media/poster-manifesto.jpg" alt="The Dysobay manifesto poster" loading="lazy">
+    <a href="manifesto.html" class="media media--3x4" data-reveal-media data-skew>
+      <span class="media__inner" data-parallax><img src="media/poster-manifesto.jpg" alt="The Dysobay manifesto poster" loading="lazy"></span>
     </a>
   </div>
 </section>
@@ -75,16 +81,30 @@
   <div class="wrap">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:var(--space-4);margin-bottom:var(--space-6)" data-reveal>
       <h2 class="h2">New drop</h2>
-      <a class="link-underline" href="collections.html">View all</a>
+      <a class="link-underline" href="collections.html">View all 28</a>
     </div>
-    <div class="grid grid--4" data-render="product-grid" data-limit="4"></div>
+    <div class="grid grid--4" data-render="product-grid" data-limit="4" data-skew></div>
+  </div>
+</section>
+
+<section class="rail" data-hscroll>
+  <div class="rail__head" data-reveal>
+    <h2 class="h2">The archive, sideways</h2>
+    <p class="small">Keep scrolling — the row moves.</p>
+  </div>
+  <div class="rail__track" data-hscroll-track data-render="rail" data-rail-source="products"></div>
+</section>
+
+<section class="section band--ink" data-curtain>
+  <div class="wrap">
+    <div class="stats" data-render="stats"></div>
   </div>
 </section>
 
 <section class="section band">
   <div class="wrap grid grid--split">
-    <figure class="media media--4x5" data-reveal-media>
-      <img src="media/kit-collar-label.jpg" alt="Dysobay collar label and hangtag on a white shirt" loading="lazy">
+    <figure class="media media--4x5" data-reveal-media data-skew>
+      <span class="media__inner" data-parallax><img src="media/kit-collar-label.jpg" alt="Dysobay collar label and hangtag on a white shirt" loading="lazy"></span>
     </figure>
     <div class="stack" data-reveal>
       <p class="brush" style="font-size:clamp(2.5rem,5vw,3.5rem);color:var(--clay)">Not Mass Approved</p>
@@ -95,9 +115,19 @@
 </section>
 
 <section class="section">
+  <div class="wrap stack-lg">
+    <div data-reveal>
+      <p class="eyebrow">Four collections</p>
+      <h2 class="h2" style="margin-top:var(--space-2)">Shown once, then retired.</h2>
+    </div>
+    <div class="grid grid--4" data-render="collections"></div>
+  </div>
+</section>
+
+<section class="section section--flush-top">
   <div class="wrap grid grid--split">
-    <figure class="media media--1x1" data-reveal-media>
-      <img src="media/look-motion-01.jpg" alt="Dysobay look photographed in motion" loading="lazy">
+    <figure class="media media--1x1" data-reveal-media data-skew>
+      <span class="media__inner" data-parallax><img src="media/look-motion-01.jpg" alt="Dysobay look photographed in motion" loading="lazy"></span>
     </figure>
     <div class="stack" data-reveal>
       <p class="eyebrow">Milan Fashion Week</p>
@@ -108,6 +138,26 @@
   </div>
 </section>
 
+<section class="marquee marquee--paper" aria-hidden="true">
+  <div class="marquee__track">
+    <span class="marquee__item">Milan ✕3</span>
+    <span class="marquee__item">28 pieces</span>
+    <span class="marquee__item">0 restocks</span>
+    <span class="marquee__item">1 of each</span>
+    <span class="marquee__item">Dress accordingly</span>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap stack-lg">
+    <div data-reveal>
+      <p class="eyebrow">What comes with the piece</p>
+      <h2 class="h2" style="margin-top:var(--space-2)">Six things that are not extras.</h2>
+    </div>
+    <div class="grid grid--3" data-render="services"></div>
+  </div>
+</section>
+
 <section class="section section--flush-top">
   <div class="wrap stack-lg">
     <div data-reveal>
@@ -115,10 +165,10 @@
       <h2 class="h2" style="margin-top:var(--space-2)">The piece arrives argued for.</h2>
     </div>
     <div class="kitstrip">
-      <figure class="media media--1x1" data-reveal-media><img src="media/kit-box-01.jpg" alt="Striped Dysobay box with the painted X" loading="lazy"></figure>
-      <figure class="media media--1x1" data-reveal-media><img src="media/kit-box-open.jpg" alt="Opened Dysobay box lined in orange" loading="lazy"></figure>
-      <figure class="media media--1x1" data-reveal-media><img src="media/kit-hangtag.jpg" alt="Dysobay hangtag" loading="lazy"></figure>
-      <figure class="media media--1x1" data-reveal-media><img src="media/kit-thankyou.jpg" alt="Dysobay thank-you card" loading="lazy"></figure>
+      <figure class="media media--1x1" data-reveal-media><span class="media__inner" data-parallax><img src="media/kit-box-01.jpg" alt="Striped Dysobay box with the painted X" loading="lazy"></span></figure>
+      <figure class="media media--1x1" data-reveal-media><span class="media__inner" data-parallax><img src="media/kit-box-open.jpg" alt="Opened Dysobay box lined in orange" loading="lazy"></span></figure>
+      <figure class="media media--1x1" data-reveal-media><span class="media__inner" data-parallax><img src="media/kit-hangtag.jpg" alt="Dysobay hangtag" loading="lazy"></span></figure>
+      <figure class="media media--1x1" data-reveal-media><span class="media__inner" data-parallax><img src="media/kit-thankyou.jpg" alt="Dysobay thank-you card" loading="lazy"></span></figure>
     </div>
   </div>
 </section>
@@ -129,11 +179,11 @@
       <h2 class="h2">From the journal</h2>
       <a class="link-underline" href="journal.html">Read more</a>
     </div>
-    <div class="grid grid--3" data-render="journal"></div>
+    <div class="grid grid--3" data-render="journal" data-limit="3" data-skew></div>
   </div>
 </section>
 
-<section class="band--ink" style="padding-block:var(--space-8)">
+<section class="band--ink" style="padding-block:var(--space-8)" data-curtain>
   <div class="wrap" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:var(--space-7)" data-reveal>
     <img src="media/kit-x-mark.jpg" alt="The Dysobay D crossed by a painted X" style="height:96px;width:auto;background:var(--paper);padding:var(--space-2) var(--space-4);border-radius:var(--radius-sm)">
     <img src="media/kit-barcode.jpg" alt="Barcode motif reading 40181 700982" style="height:96px;width:auto;background:var(--paper);padding:var(--space-2) var(--space-4);border-radius:var(--radius-sm)">
@@ -160,6 +210,7 @@
           <li><a href="wishlist.html">Wishlist</a></li>
           <li><a href="search.html">Search</a></li>
           <li><a href="cart.html">Bag</a></li>
+          <li><a href="checkout.html">Checkout</a></li>
         </ul>
       </div>
       <div>
@@ -193,5 +244,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@barba/core@2.9.7/dist/barba.umd.js"></script>
 <script src="assets/js/data.js"></script>
 <script src="assets/js/site.js"></script>
+<script src="assets/js/shop.js"></script>
 </body>
 </html>

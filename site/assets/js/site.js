@@ -1,13 +1,14 @@
 /* Dysobay storefront runtime.
  *
- * Three jobs, in this order of importance:
  *   1. Render the catalogue into each page's [data-render] hooks.
- *   2. Animate — GSAP + ScrollTrigger for scroll reveals and photo reveals.
- *   3. Navigate — Barba.js swaps the page container so nav/footer never blink.
+ *   2. Animate — GSAP + ScrollTrigger. Pinned hero, pinned horizontal
+ *      galleries, scroll-velocity skew, character-level headlines, parallax
+ *      inside every frame, curtain wipes, counters, magnetic buttons.
+ *   3. Navigate — Barba.js swaps the page container so the chrome never blinks.
  *
- * Everything degrades: with GSAP missing (or prefers-reduced-motion) nothing
- * is ever hidden, and with Barba missing (or on a file:// open, where its
- * fetch cannot work) links just navigate the browser's normal way.
+ * Everything degrades: with GSAP missing (or prefers-reduced-motion) nothing is
+ * ever hidden, and with Barba missing (or on a file:// open, where its fetch
+ * cannot work) links just navigate the browser's normal way.
  */
 (function () {
   'use strict';
@@ -25,552 +26,683 @@
     document.documentElement.classList.add('js-anim');
   }
 
-  /* ───────────────────────────  helpers  ─────────────────────────── */
+  const $ = (s, r) => (r || document).querySelector(s);
+  const $$ = (s, r) => Array.prototype.slice.call((r || document).querySelectorAll(s));
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const param = (n) => new URLSearchParams(window.location.search).get(n) || '';
+  const productById = (id) => D.PRODUCTS.find((p) => p.id === id);
+  const isPhone = () => window.matchMedia('(max-width: 860px)').matches;
 
-  const $ = (sel, root) => (root || document).querySelector(sel);
-  const $$ = (sel, root) => Array.prototype.slice.call((root || document).querySelectorAll(sel));
-
-  function esc(s) {
-    return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  }
-
-  function param(name) {
-    return new URLSearchParams(window.location.search).get(name) || '';
-  }
-
-  function productById(id) {
-    return D.PRODUCTS.find((p) => p.id === id);
-  }
-
-  /* ───────────────────────────  store  ───────────────────────────── */
-  /* A prototype still has to behave like a shop: adding to the bag has to
-     survive a page swap, or every "Add to bag" button is a dead control. */
+  /* ═══════════════════════════  store  ═══════════════════════════ */
 
   const store = {
-    read(key) {
-      try {
-        return JSON.parse(localStorage.getItem('dysobay:' + key)) || [];
-      } catch (e) {
-        return [];
-      }
+    read(k) { try { return JSON.parse(localStorage.getItem('dysobay:' + k)) || []; } catch (e) { return []; } },
+    write(k, v) { try { localStorage.setItem('dysobay:' + k, JSON.stringify(v)); } catch (e) {} syncCounts(); },
+    has(k, id) { return this.read(k).indexOf(id) !== -1; },
+    toggle(k, id) {
+      const l = this.read(k); const i = l.indexOf(id);
+      if (i === -1) l.push(id); else l.splice(i, 1);
+      this.write(k, l); return i === -1;
     },
-    write(key, val) {
-      try {
-        localStorage.setItem('dysobay:' + key, JSON.stringify(val));
-      } catch (e) {
-        /* private mode — the session still works, it just won't persist */
-      }
-      syncCounts();
-    },
-    has(key, id) {
-      return this.read(key).indexOf(id) !== -1;
-    },
-    toggle(key, id) {
-      const list = this.read(key);
-      const i = list.indexOf(id);
-      if (i === -1) list.push(id);
-      else list.splice(i, 1);
-      this.write(key, list);
-      return i === -1;
-    },
-    remove(key, id) {
-      this.write(key, this.read(key).filter((x) => x !== id));
-    },
-    items(key) {
-      return this.read(key).map(productById).filter(Boolean);
-    },
+    remove(k, id) { this.write(k, this.read(k).filter((x) => x !== id)); },
+    items(k) { return this.read(k).map(productById).filter(Boolean); },
   };
 
-  /* Seed a first-time visitor so Bag/Wishlist read as a real session. */
-  if (localStorage.getItem('dysobay:seeded') !== '1') {
+  if (localStorage.getItem('dysobay:seeded') !== '2') {
     try {
-      localStorage.setItem('dysobay:seeded', '1');
-      localStorage.setItem('dysobay:bag', JSON.stringify(['amara-cape', 'nuits-blazer']));
-      localStorage.setItem('dysobay:wishlist', JSON.stringify(['zellige-dress', 'warda-coat', 'rihla-trench']));
-    } catch (e) {
-      /* ignore */
-    }
+      localStorage.setItem('dysobay:seeded', '2');
+      localStorage.setItem('dysobay:bag', JSON.stringify(['amara-cape', 'plume-gown']));
+      localStorage.setItem('dysobay:wishlist', JSON.stringify(['zellige-dress', 'torn-tuxedo', 'coil-knit', 'brush-dress']));
+    } catch (e) {}
   }
 
   function syncCounts() {
-    const bag = store.read('bag').length;
-    $$('[data-bag-count]').forEach((n) => {
-      n.textContent = bag ? '(' + bag + ')' : '';
-    });
-    $$('[data-wishlist-count]').forEach((n) => {
-      const w = store.read('wishlist').length;
-      n.textContent = w ? '(' + w + ')' : '';
-    });
+    const b = store.read('bag').length, w = store.read('wishlist').length;
+    $$('[data-bag-count]').forEach((n) => { n.textContent = b ? '(' + b + ')' : ''; });
+    $$('[data-wishlist-count]').forEach((n) => { n.textContent = w ? '(' + w + ')' : ''; });
   }
 
   let toastTimer;
-  function toast(message) {
-    let node = $('.toast');
-    if (!node) {
-      node = document.createElement('div');
-      node.className = 'toast';
-      node.setAttribute('role', 'status');
-      document.body.appendChild(node);
-    }
-    node.textContent = message;
+  function toast(msg) {
+    let n = $('.toast');
+    if (!n) { n = document.createElement('div'); n.className = 'toast'; n.setAttribute('role', 'status'); document.body.appendChild(n); }
+    n.textContent = msg;
     clearTimeout(toastTimer);
     if (ANIM) {
-      gsap.killTweensOf(node);
-      gsap.fromTo(node, { yPercent: 120, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.35, ease: 'power3.out' });
-      toastTimer = setTimeout(() => gsap.to(node, { yPercent: 120, opacity: 0, duration: 0.3 }), 2200);
+      gsap.killTweensOf(n);
+      gsap.fromTo(n, { yPercent: 140, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.5, ease: 'elastic.out(1,0.7)' });
+      toastTimer = setTimeout(() => gsap.to(n, { yPercent: 140, opacity: 0, duration: 0.3, ease: 'power2.in' }), 2400);
     } else {
-      node.style.transform = 'translate(-50%, 0)';
-      toastTimer = setTimeout(() => {
-        node.style.transform = 'translate(-50%, 120%)';
-      }, 2200);
+      n.style.transform = 'translate(-50%,0)';
+      toastTimer = setTimeout(() => { n.style.transform = 'translate(-50%,140%)'; }, 2400);
     }
   }
 
-  /* ───────────────────────────  templates  ───────────────────────── */
+  /* ═══════════════════════════  templates  ═══════════════════════ */
 
-  function cardHTML(p) {
-    const second = p.images[1] ? `<img src="${p.images[1]}" alt="" loading="lazy" aria-hidden="true">` : '';
+  function cardHTML(p, i) {
+    const c = D.collectionOf(p.collection);
+    const second = p.images[1] ? `<img class="card__alt" src="${p.images[1]}" alt="" loading="lazy" aria-hidden="true">` : '';
     const flag = p.tag ? `<span class="tag tag--clay card__flag">${esc(p.tag)}</span>` : '';
     const sold = p.status === 'sold' ? '<span class="card__sold">Sold — retired</span>' : '';
-    return `<a class="card" href="product.html?id=${encodeURIComponent(p.id)}">
-      <span class="card__media" data-reveal-media>
-        <img src="${p.images[0]}" alt="${esc(p.name)}" loading="lazy">
-        ${second}
-        ${flag}${sold}
-      </span>
-      <span class="card__meta">
-        <span>
-          <span class="card__name">${esc(p.name)}</span>
-          <span class="card__sub">${esc(p.category)} · ${esc(p.size)}</span>
+    /* A button may not live inside an <a>, so the quick-view control is a
+       sibling of the link and the whole thing is wrapped in a plain div. */
+    return `<div class="card" data-stagger${i != null ? ` style="--i:${i}"` : ''}>
+      <a class="card__link" href="product.html?id=${encodeURIComponent(p.id)}">
+        <span class="card__media" data-reveal-media>
+          <span class="card__inner" data-parallax>
+            <img src="${p.images[0]}" alt="${esc(p.name)}" loading="lazy">
+            ${second}
+          </span>
+          ${flag}${sold}
+          <span class="card__cta">View piece</span>
         </span>
-        <span class="card__price">${D.AED(p.price)}</span>
-      </span>
-    </a>`;
+        <span class="card__meta">
+          <span>
+            <span class="card__name">${esc(p.name)}</span>
+            <span class="card__sub">${esc(p.category)} · ${esc(c.season)} · ${esc(p.size)}</span>
+          </span>
+          <span class="card__price">${D.AED(p.price)}</span>
+        </span>
+      </a>
+      <button type="button" class="card__qv" data-quickview="${p.id}">Quick view</button>
+    </div>`;
   }
 
-  function mediaHTML(src, alt, ratio, cls) {
-    return `<figure class="media media--${ratio || '3x4'}${cls ? ' ' + cls : ''}" data-reveal-media>
-      <img src="${src}" alt="${esc(alt || '')}" loading="lazy">
+  const mediaHTML = (src, alt, ratio, cls) =>
+    `<figure class="media media--${ratio || '3x4'}${cls ? ' ' + cls : ''}" data-reveal-media>
+      <span class="media__inner" data-parallax><img src="${src}" alt="${esc(alt || '')}" loading="lazy"></span>
     </figure>`;
-  }
 
-  /* ───────────────────────────  renderers  ───────────────────────── */
+  /* ═══════════════════════════  renderers  ═══════════════════════ */
 
   const renderers = {
     'product-grid'(node) {
       const limit = parseInt(node.dataset.limit, 10);
       let list = D.PRODUCTS.slice();
-      if (node.dataset.filterCategory && node.dataset.filterCategory !== 'All') {
-        list = list.filter((p) => p.category === node.dataset.filterCategory);
-      }
+      const cat = node.dataset.filterCategory;
+      const col = node.dataset.filterCollection;
+      const avail = node.dataset.filterAvailability;
+      const max = parseInt(node.dataset.filterMaxPrice, 10);
+      if (cat && cat !== 'All') list = list.filter((p) => p.category === cat);
+      if (col && col !== 'all') list = list.filter((p) => p.collection === col);
+      if (avail === 'available') list = list.filter((p) => p.status !== 'sold');
+      if (avail === 'last') list = list.filter((p) => p.status === 'last-piece');
+      if (max) list = list.filter((p) => p.price <= max);
+
+      const order = D.PRODUCTS.map((p) => p.id);
+      const SORTS = {
+        featured: (a, b) => order.indexOf(a.id) - order.indexOf(b.id),
+        'price-asc': (a, b) => a.price - b.price,
+        'price-desc': (a, b) => b.price - a.price,
+        'name-asc': (a, b) => a.name.localeCompare(b.name),
+        season: (a, b) => D.collectionOf(a.collection).season.localeCompare(D.collectionOf(b.collection).season),
+      };
+      list.sort(SORTS[node.dataset.sort] || SORTS.featured);
       if (limit) list = list.slice(0, limit);
       node.innerHTML = list.length
         ? list.map(cardHTML).join('')
-        : '<p class="lede empty">Nothing in this category right now. Every piece leaves for good — check the archive on the lookbook.</p>';
+        : '<p class="lede empty">Nothing left in this cut. Every piece leaves for good — the lookbook keeps the record.</p>';
+      const count = $('[data-piece-count]');
+      if (count) count.textContent = list.length;
     },
 
     filters(node) {
       const target = $('[data-render="product-grid"]');
-      node.innerHTML = D.CATEGORIES.map(
-        (c, i) => `<button type="button" class="filter${i === 0 ? ' is-active' : ''}" data-category="${esc(c)}">${esc(c)}</button>`
-      ).join('');
+      node.innerHTML =
+        `<div class="filters__row">${D.CATEGORIES.map((c, i) => `<button type="button" class="filter${i === 0 ? ' is-active' : ''}" data-category="${esc(c)}">${esc(c)}</button>`).join('')}</div>
+         <div class="filters__row filters__row--sub">
+           <button type="button" class="filter is-active" data-collection="all">All seasons</button>
+           ${D.COLLECTIONS.map((c) => `<button type="button" class="filter" data-collection="${c.id}">${esc(c.name)} <span class="filter__season">${esc(c.season)}</span></button>`).join('')}
+         </div>`;
       node.addEventListener('click', (e) => {
         const btn = e.target.closest('.filter');
         if (!btn || !target) return;
-        $$('.filter', node).forEach((b) => b.classList.toggle('is-active', b === btn));
-        target.dataset.filterCategory = btn.dataset.category;
+        const row = btn.closest('.filters__row');
+        $$('.filter', row).forEach((b) => b.classList.toggle('is-active', b === btn));
+        if (btn.dataset.category) target.dataset.filterCategory = btn.dataset.category;
+        if (btn.dataset.collection) target.dataset.filterCollection = btn.dataset.collection;
         renderers['product-grid'](target);
-        const count = $('[data-piece-count]');
-        if (count) count.textContent = target.querySelectorAll('.card').length;
         animateIn(target);
       });
     },
 
     lookbook(node) {
-      node.innerHTML = D.LOOKBOOK.map((s) => mediaHTML(s.src, s.caption, '3x4')).join('');
+      node.innerHTML = D.LOOKBOOK.map((s, i) => `<figure class="media media--3x4 look" data-reveal-media data-look="${s.collection}" style="--i:${i % 6}">
+          <span class="media__inner" data-parallax><img src="${s.src}" alt="${esc(s.caption)}" loading="lazy"></span>
+          <figcaption class="look__cap">${esc(s.caption)}</figcaption>
+        </figure>`).join('');
+    },
+
+    'lookbook-filters'(node) {
+      const grid = $('[data-render="lookbook"]');
+      node.innerHTML =
+        `<button type="button" class="filter is-active" data-look-filter="all">Everything</button>` +
+        D.COLLECTIONS.map((c) => `<button type="button" class="filter" data-look-filter="${c.id}">${esc(c.name)}</button>`).join('');
+      node.addEventListener('click', (e) => {
+        const btn = e.target.closest('.filter');
+        if (!btn || !grid) return;
+        $$('.filter', node).forEach((b) => b.classList.toggle('is-active', b === btn));
+        const want = btn.dataset.lookFilter;
+        $$('.look', grid).forEach((f) => {
+          const show = want === 'all' || f.dataset.look === want;
+          f.hidden = !show;
+        });
+        if (ANIM) {
+          gsap.fromTo($$('.look:not([hidden])', grid), { opacity: 0, scale: 0.94, y: 40 },
+            { opacity: 1, scale: 1, y: 0, duration: 0.6, ease: 'power3.out', stagger: { amount: 0.4, from: 'random' } });
+          ScrollTrigger.refresh();
+        }
+      });
     },
 
     journal(node) {
-      node.innerHTML = D.JOURNAL.map(
-        (j) => `<article class="card">
-          ${mediaHTML(j.image, j.title, '4x3')}
-          <p class="card__sub" style="margin-top:var(--space-4)">${esc(j.date)}</p>
+      const limit = parseInt(node.dataset.limit, 10) || D.JOURNAL.length;
+      node.innerHTML = D.JOURNAL.slice(0, limit).map((j, i) => `<article class="card" data-stagger style="--i:${i % 3}">
+          <span class="card__media card__media--wide" data-reveal-media>
+            <span class="card__inner" data-parallax><img src="${j.image}" alt="${esc(j.title)}" loading="lazy"></span>
+          </span>
+          <p class="card__sub" style="margin-top:var(--space-4)">${esc(j.date)} · ${esc(j.read)}</p>
           <h3 class="h3" style="margin-top:var(--space-2)">${esc(j.title)}</h3>
           <p class="small" style="margin-top:var(--space-2);line-height:var(--leading-relaxed)">${esc(j.excerpt)}</p>
-        </article>`
-      ).join('');
+        </article>`).join('');
     },
 
     manifesto(node) {
-      node.innerHTML = D.MANIFESTO.map(
-        (l) => `<div class="manifesto-row" data-reveal>
-          <div class="manifesto-num">${esc(l.n)}</div>
+      node.innerHTML = D.MANIFESTO.map((l) => `<div class="manifesto-row" data-reveal>
+          <div class="manifesto-num" data-count="${esc(l.n)}">${esc(l.n)}</div>
           <div>
             <h2 class="h3">${esc(l.title)}</h2>
             <p class="lede" style="margin-top:var(--space-3)">${esc(l.body)}</p>
           </div>
-        </div>`
-      ).join('');
+        </div>`).join('');
+    },
+
+    stats(node) {
+      node.innerHTML = D.STATS.map((s) => `<div class="stat" data-reveal>
+          <span class="stat__num" data-count-to="${s.value}">0</span>
+          <span class="stat__label">${esc(s.label)}</span>
+        </div>`).join('');
+    },
+
+    services(node) {
+      node.innerHTML = D.SERVICES.map((s, i) => `<div class="service" data-stagger style="--i:${i % 3}">
+          <p class="service__meta">${esc(s.meta)}</p>
+          <h3 class="h4">${esc(s.title)}</h3>
+          <p class="small" style="margin-top:var(--space-2);line-height:var(--leading-relaxed)">${esc(s.body)}</p>
+        </div>`).join('');
     },
 
     faq(node) {
-      node.innerHTML = D.FAQS.map(
-        (f, i) => `<div class="acc">
+      node.innerHTML = D.FAQS.map((f, i) => `<div class="acc">
           <button type="button" class="acc__head" aria-expanded="false" aria-controls="faq-panel-${i}">
             <span>${esc(f.q)}</span><span class="acc__sign" aria-hidden="true">+</span>
           </button>
           <div class="acc__panel" id="faq-panel-${i}"><div>${esc(f.a)}</div></div>
-        </div>`
-      ).join('');
-
-      node.addEventListener('click', (e) => {
-        const head = e.target.closest('.acc__head');
-        if (!head) return;
-        const panel = head.nextElementSibling;
-        const open = head.getAttribute('aria-expanded') === 'true';
-        head.setAttribute('aria-expanded', String(!open));
-        head.querySelector('.acc__sign').textContent = open ? '+' : '−';
-        const to = open ? 0 : panel.scrollHeight;
-        if (ANIM) gsap.to(panel, { height: to, duration: 0.35, ease: 'power2.out' });
-        else panel.style.height = to ? 'auto' : 0;
-      });
+        </div>`).join('');
+      wireAccordion(node);
     },
 
     sizes(node) {
       const head = ['FR', 'US', 'UK', 'IT', 'Bust cm', 'Waist cm', 'Hip cm'];
-      node.innerHTML =
-        '<thead><tr>' +
-        head.map((h) => `<th scope="col">${h}</th>`).join('') +
-        '</tr></thead><tbody>' +
-        D.SIZES.map((r) => '<tr>' + r.map((c) => `<td>${esc(c)}</td>`).join('') + '</tr>').join('') +
-        '</tbody>';
+      node.innerHTML = '<thead><tr>' + head.map((h) => `<th scope="col">${h}</th>`).join('') + '</tr></thead><tbody>' +
+        D.SIZES.map((r) => '<tr>' + r.map((c) => `<td>${esc(c)}</td>`).join('') + '</tr>').join('') + '</tbody>';
     },
 
+    collections(node) {
+      node.innerHTML = D.COLLECTIONS.map((c, i) => `<div class="season" data-stagger style="--i:${i % 4}">
+          <p class="season__tag">${esc(c.season)}</p>
+          <h3 class="h3">${esc(c.name)}</h3>
+          <p class="card__sub">${esc(c.place)}</p>
+          <p class="small" style="margin-top:var(--space-3);line-height:var(--leading-relaxed)">${esc(c.note)}</p>
+        </div>`).join('');
+    },
+
+    /* ── product detail ─────────────────────────────────────────── */
     pdp(node) {
       const p = productById(param('id')) || D.PRODUCTS[0];
+      const c = D.collectionOf(p.collection);
       document.title = p.name + ' — Dysobay';
-      const inWishlist = store.has('wishlist', p.id);
-      node.innerHTML = `<div class="pdp__gallery">
-          ${p.images.map((src, i) => mediaHTML(src, p.name + (i ? ' — detail' : ' — full look'), '3x4')).join('')}
+      const inWish = store.has('wishlist', p.id);
+      const statusText = { 'in-stock': 'Available — one piece', 'last-piece': 'Last piece', sold: 'Sold — design retired' }[p.status];
+
+      node.innerHTML = `
+        <div class="pdp__gallery">
+          ${p.images.map((src, i) => `<figure class="media media--3x4 pdp__shot" data-reveal-media data-shot="${i}">
+              <span class="media__inner" data-parallax><img src="${src}" alt="${esc(p.name)}${i ? ' — detail ' + i : ' — full look'}" ${i ? 'loading="lazy"' : ''}></span>
+            </figure>`).join('')}
         </div>
-        <div class="stack">
-          <p class="eyebrow">${esc(p.category)} · ${esc(p.season)}</p>
-          <h1 class="h1" data-split>${esc(p.name)}</h1>
-          <p class="h3">${D.AED(p.price)}</p>
-          <p><span class="tag tag--clay">One piece only</span> <span class="tag">${esc(p.size)}</span></p>
-          <p class="status status--${p.status}">${p.status === 'in-stock' ? 'Available' : p.status === 'last-piece' ? 'Last piece' : 'Sold — design retired'}</p>
-          <p class="lede" style="max-width:46ch">${esc(p.note)}</p>
-          <p class="lede" style="max-width:46ch">Cut once, in a single size, by hand in our Dubai atelier. When this piece sells, the design retires with it — no restock, no reissue.</p>
-          <div style="display:flex;flex-wrap:wrap;gap:var(--space-3);margin-top:var(--space-6)">
-            <button type="button" class="btn btn--lg" data-add-bag="${p.id}"${p.status === 'sold' ? ' disabled' : ''}>${p.status === 'sold' ? 'Sold out' : 'Add to bag'}</button>
-            <button type="button" class="btn btn--ghost btn--lg" data-toggle-wishlist="${p.id}">${inWishlist ? 'In wishlist' : 'Add to wishlist'}</button>
+
+        <div class="pdp__panel">
+          <div class="pdp__sticky stack">
+            <p class="eyebrow">${esc(p.category)} · ${esc(c.name)} ${esc(c.season)}${p.walked ? ' · ' + esc(p.walked) : ''}</p>
+            <h1 class="h1" data-split>${esc(p.name)}</h1>
+            <p class="pdp__price">${D.AED(p.price)}</p>
+            <p><span class="tag tag--clay">One piece only</span> <span class="tag">${esc(p.size)}</span> <span class="tag tag--denim">No. ${esc(p.piece)}</span></p>
+            <p class="status status--${p.status}">${esc(statusText)}</p>
+            <p class="lede" style="max-width:46ch">${esc(p.note)}</p>
+
+            <div class="pdp__actions">
+              <button type="button" class="btn btn--lg btn--block" data-magnetic data-add-bag="${p.id}"${p.status === 'sold' ? ' disabled' : ''}>${p.status === 'sold' ? 'Sold out' : 'Add to bag — ' + D.AED(p.price)}</button>
+              <button type="button" class="btn btn--ghost btn--lg btn--block" data-toggle-wishlist="${p.id}">${inWish ? 'Saved to wishlist' : 'Add to wishlist'}</button>
+            </div>
+
+            <ul class="pdp__assure">
+              <li>Worldwide express shipping included</li>
+              <li>One alteration by the atelier that made it</li>
+              <li>Numbered authenticity card</li>
+            </ul>
+
+            <div class="pdp__spec">
+              ${[['Material', p.material], ['Lining', p.lining], ['Size', p.size + ' — cut once, no other size exists'],
+                 ['Atelier', p.atelier], ['Hours of work', p.hours + ' h'], ['Piece number', p.piece],
+                 ['Collection', c.name + ' · ' + c.season], ['Shown at', p.walked ? c.place + ' — ' + p.walked : 'Not shown — studio release']]
+                .map(([k, v]) => `<div class="pdp__specrow"><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}
+            </div>
+
+            <div class="pdp__acc">
+              ${[
+                ['The making', `Drawn, cut and finished once. ${esc(p.hours)} hours of work at ${esc(p.atelier)}, in ${esc(p.material.toLowerCase())}. Nothing about this piece is graded to a size run — the pattern exists in ${esc(p.size)} and nowhere else, and it is destroyed once the piece ships.`],
+                ['Sizing & fit', `Cut to ${esc(p.size)}. Use the size guide to convert it, and write to us before ordering if you are between sizes — one alteration by the atelier that made the piece is included, and we would rather adjust it than take it back.`],
+                ['Shipping & duties', 'Express shipping from Dubai is included worldwide, dispatched within 3–5 working days of your order. Duties and taxes are calculated and settled at checkout, so nothing arrives with a bill attached.'],
+                ['Care', 'Specific to this piece: professional clean only, cool iron on the reverse, store on a broad hanger away from direct light. Never tumble-dry. We repair anything we made, for as long as we exist — materials at cost, labour free.'],
+                ['Authenticity & provenance', `Ships with a numbered card carrying the piece number (${esc(p.piece)}), the atelier, the hours worked and the name of the person who finished it. The card is registered against your order, not against the design — because the design is not repeated.`],
+                ['Returns', 'All sales are final. Every piece is the only one, so a return does not go back into stock — it goes into a cupboard. Ask us anything before you order; a person answers.'],
+              ].map(([q, a], i) => `<div class="acc">
+                  <button type="button" class="acc__head" aria-expanded="false" aria-controls="pdp-acc-${i}"><span>${q}</span><span class="acc__sign" aria-hidden="true">+</span></button>
+                  <div class="acc__panel" id="pdp-acc-${i}"><div>${a}</div></div>
+                </div>`).join('')}
+            </div>
+
+            <p class="small pdp__links">
+              <a class="link-underline" href="sizeguide.html">Size guide</a> ·
+              <a class="link-underline" href="faq.html">FAQ</a> ·
+              <a class="link-underline" href="contact.html">Book an appointment</a>
+            </p>
           </div>
-          <p class="small" style="margin-top:var(--space-6);border-top:1px solid var(--line);padding-top:var(--space-5)">
-            <a class="link-underline" href="sizeguide.html">Size guide</a>
-            &nbsp;·&nbsp;
-            <a class="link-underline" href="faq.html">Shipping &amp; care</a>
-          </p>
         </div>`;
 
-      const related = $('[data-render="related"]');
-      if (related) {
-        related.innerHTML = D.PRODUCTS.filter((x) => x.id !== p.id)
-          .slice(0, 4)
-          .map(cardHTML)
-          .join('');
+      wireAccordion(node);
+
+      const rel = $('[data-render="related"]');
+      if (rel) {
+        const same = D.PRODUCTS.filter((x) => x.id !== p.id && x.collection === p.collection);
+        const rest = D.PRODUCTS.filter((x) => x.id !== p.id && x.collection !== p.collection);
+        rel.innerHTML = same.concat(rest).slice(0, 4).map(cardHTML).join('');
       }
+      const relTitle = $('[data-related-collection]');
+      if (relTitle) relTitle.textContent = c.name;
     },
 
-    related() {
-      /* filled by the pdp renderer, which knows which piece to exclude */
-    },
+    related() { /* filled by pdp, which knows what to exclude */ },
 
     bag(node) {
       const items = store.items('bag');
       if (!items.length) {
-        node.innerHTML = `<div class="empty stack">
-          <p class="lede">Your bag is empty.</p>
-          <p><a class="btn" href="collections.html">See what is still available</a></p>
-        </div>`;
+        node.innerHTML = `<div class="empty stack"><p class="lede">Your bag is empty.</p><p><a class="btn" href="collections.html">See what is still available</a></p></div>`;
         return;
       }
       const total = items.reduce((s, p) => s + p.price, 0);
-      node.innerHTML =
-        items
-          .map(
-            (p) => `<div class="bagline" data-reveal>
-        <a class="media media--3x4" href="product.html?id=${encodeURIComponent(p.id)}"><img src="${p.images[0]}" alt="${esc(p.name)}"></a>
-        <div>
-          <a class="h4" href="product.html?id=${encodeURIComponent(p.id)}">${esc(p.name)}</a>
-          <p class="small" style="margin-top:var(--space-2)">Size ${esc(p.size)} · One piece only</p>
-          <p style="margin-top:var(--space-3)">${D.AED(p.price)}</p>
-        </div>
-        <button type="button" class="bagline__remove" data-remove-bag="${p.id}" aria-label="Remove ${esc(p.name)} from bag">×</button>
-      </div>`
-          )
-          .join('') +
+      node.innerHTML = items.map((p) => `<div class="bagline" data-reveal>
+          <a class="media media--3x4" href="product.html?id=${encodeURIComponent(p.id)}"><span class="media__inner"><img src="${p.images[0]}" alt="${esc(p.name)}"></span></a>
+          <div>
+            <a class="h4" href="product.html?id=${encodeURIComponent(p.id)}">${esc(p.name)}</a>
+            <p class="small" style="margin-top:var(--space-2)">Size ${esc(p.size)} · No. ${esc(p.piece)} · One piece only</p>
+            <p class="small">${esc(p.atelier)} · ${esc(p.hours)} h of work</p>
+            <p style="margin-top:var(--space-3)">${D.AED(p.price)}</p>
+          </div>
+          <button type="button" class="bagline__remove" data-remove-bag="${p.id}" aria-label="Remove ${esc(p.name)} from bag">×</button>
+        </div>`).join('') +
         `<div class="bagtotal"><span>Subtotal</span><span>${D.AED(total)}</span></div>
-         <p class="small" style="margin-bottom:var(--space-5)">Shipping from Dubai is calculated at checkout. Every piece here is the only one — leaving it in the bag does not hold it.</p>
-         <a class="btn btn--lg btn--block" href="checkout.html">Checkout</a>`;
+         <p class="small" style="margin-bottom:var(--space-5)">Worldwide express shipping is included. Duties and taxes are settled at checkout. Every piece here is the only one — leaving it in the bag does not hold it.</p>
+         <a class="btn btn--lg btn--block" data-magnetic href="checkout.html">Checkout</a>`;
     },
 
     wishlist(node) {
       const items = store.items('wishlist');
       if (!items.length) {
-        node.innerHTML = `<div class="empty stack">
-          <p class="lede">Nothing saved yet.</p>
-          <p><a class="btn" href="collections.html">Browse the collection</a></p>
-        </div>`;
+        node.innerHTML = `<div class="empty stack"><p class="lede">Nothing saved yet.</p><p><a class="btn" href="collections.html">Browse the collection</a></p></div>`;
         return;
       }
-      node.innerHTML = items
-        .map(
-          (p) => `<div>
-            ${cardHTML(p)}
-            <div style="display:flex;gap:var(--space-2);margin-top:var(--space-3)">
-              <button type="button" class="btn btn--ghost btn--block" data-add-bag="${p.id}"${p.status === 'sold' ? ' disabled' : ''}>${p.status === 'sold' ? 'Sold' : 'Add to bag'}</button>
-              <button type="button" class="btn btn--ghost" data-toggle-wishlist="${p.id}" aria-label="Remove ${esc(p.name)} from wishlist">×</button>
-            </div>
-          </div>`
-        )
-        .join('');
+      node.innerHTML = items.map((p, i) => `<div data-stagger style="--i:${i % 3}">
+          ${cardHTML(p)}
+          <div style="display:flex;gap:var(--space-2);margin-top:var(--space-3)">
+            <button type="button" class="btn btn--ghost btn--block" data-add-bag="${p.id}"${p.status === 'sold' ? ' disabled' : ''}>${p.status === 'sold' ? 'Sold' : 'Add to bag'}</button>
+            <button type="button" class="btn btn--ghost" data-toggle-wishlist="${p.id}" aria-label="Remove ${esc(p.name)} from wishlist">×</button>
+          </div>
+        </div>`).join('');
     },
 
     search(node) {
       const input = $('[data-search-input]');
       const out = $('[data-search-results]');
       const summary = $('[data-search-summary]');
-
       function run(q) {
-        const term = q.trim().toLowerCase();
-        const list = term
-          ? D.PRODUCTS.filter(
-              (p) =>
-                p.name.toLowerCase().includes(term) ||
-                p.category.toLowerCase().includes(term) ||
-                p.season.toLowerCase().includes(term) ||
-                p.note.toLowerCase().includes(term)
-            )
-          : D.PRODUCTS;
-        out.innerHTML = list.length
-          ? list.map(cardHTML).join('')
-          : '<p class="lede empty">No piece matches that. Try a category — outerwear, tailoring, dresses, shirts.</p>';
-        summary.textContent = term
-          ? `${list.length} result${list.length === 1 ? '' : 's'} for “${q.trim()}”`
-          : `${list.length} pieces, each one once.`;
+        const t = q.trim().toLowerCase();
+        const list = t ? D.PRODUCTS.filter((p) => [p.name, p.category, p.material, p.atelier, p.note, D.collectionOf(p.collection).name]
+          .join(' ').toLowerCase().includes(t)) : D.PRODUCTS;
+        out.innerHTML = list.length ? list.map(cardHTML).join('')
+          : '<p class="lede empty">No piece matches that. Try a category, a season, or a material — wool, silk, denim.</p>';
+        summary.textContent = t ? `${list.length} result${list.length === 1 ? '' : 's'} for “${q.trim()}”` : `${list.length} pieces, each one once.`;
         animateIn(out);
       }
-
       if (input) {
-        const initial = param('q');
-        if (initial) input.value = initial;
+        const q0 = param('q'); if (q0) input.value = q0;
         input.addEventListener('input', () => run(input.value));
+        $$('[data-search-suggest]').forEach((b) => b.addEventListener('click', () => { input.value = b.dataset.searchSuggest; run(input.value); }));
         run(input.value);
       }
-      node.dataset.ready = '1';
+    },
+
+    /* Pinned horizontal rail — the aggressive centrepiece on Home. */
+    rail(node) {
+      const src = node.dataset.railSource;
+      const list = src === 'lookbook' ? D.LOOKBOOK.slice(0, 10) : D.PRODUCTS.slice(0, 10).map((p) => ({ src: p.images[0], caption: p.name, href: 'product.html?id=' + p.id }));
+      node.innerHTML = list.map((s) => {
+        const inner = `<span class="media__inner" data-parallax><img src="${s.src}" alt="${esc(s.caption)}" loading="lazy"></span><span class="rail__cap">${esc(s.caption)}</span>`;
+        return s.href
+          ? `<a class="media media--3x4 rail__item" href="${s.href}">${inner}</a>`
+          : `<figure class="media media--3x4 rail__item">${inner}</figure>`;
+      }).join('');
     },
   };
 
-  /* ───────────────────────────  animation  ───────────────────────── */
+  function wireAccordion(root) {
+    root.addEventListener('click', (e) => {
+      const head = e.target.closest('.acc__head');
+      if (!head) return;
+      const panel = head.nextElementSibling;
+      const open = head.getAttribute('aria-expanded') === 'true';
+      head.setAttribute('aria-expanded', String(!open));
+      head.querySelector('.acc__sign').textContent = open ? '+' : '−';
+      const to = open ? 0 : panel.scrollHeight;
+      if (ANIM) gsap.to(panel, { height: to, duration: 0.45, ease: 'expo.out', onComplete: () => ScrollTrigger.refresh() });
+      else panel.style.height = to ? 'auto' : 0;
+    });
+  }
 
-  function splitWords(el) {
-    if (el.dataset.split === 'done') return;
+  /* ═══════════════════════════  animation  ═══════════════════════ */
+
+  function splitChars(el) {
+    if (el.dataset.splitDone) return;
     const words = el.textContent.trim().split(/\s+/);
     el.textContent = '';
-    words.forEach((w, i) => {
-      const outer = document.createElement('span');
-      outer.className = 'line';
-      const inner = document.createElement('span');
-      inner.className = 'line__inner';
-      inner.textContent = w;
-      outer.appendChild(inner);
-      el.appendChild(outer);
-      if (i < words.length - 1) el.appendChild(document.createTextNode(' '));
+    words.forEach((w, wi) => {
+      const word = document.createElement('span');
+      word.className = 'word';
+      for (const ch of w) {
+        const m = document.createElement('span'); m.className = 'ch__mask';
+        const c = document.createElement('span'); c.className = 'ch'; c.textContent = ch;
+        m.appendChild(c); word.appendChild(m);
+      }
+      el.appendChild(word);
+      if (wi < words.length - 1) el.appendChild(document.createTextNode(' '));
     });
-    el.dataset.split = 'done';
+    el.dataset.splitDone = '1';
   }
 
-  /* Reveal every not-yet-revealed element inside `root`. Called on mount and
-     again whenever a renderer replaces a chunk of the DOM (filter, search). */
   function animateIn(root) {
     if (!ANIM) return;
+    const R = root || document;
 
-    $$('[data-split]', root).forEach((el) => {
+    /* Headlines: characters drop in on a rotated axis, from the left. */
+    $$('[data-split]', R).forEach((el) => {
       if (el.dataset.revealed) return;
       el.dataset.revealed = '1';
-      splitWords(el);
-      const inners = $$('.line__inner', el);
-      /* fromTo, and both y and yPercent land at 0: GSAP resolves the CSS
-         `translateY(110%)` start into pixels, so tweening yPercent alone
-         leaves that pixel offset behind and the words never come up. */
-      gsap.fromTo(
-        inners,
-        { yPercent: 110, y: 0 },
-        {
-          yPercent: 0,
-          y: 0,
-          duration: 0.9,
-          ease: 'expo.out',
-          stagger: 0.05,
-          scrollTrigger: { trigger: el, start: 'top 92%', once: true },
-        }
-      );
+      splitChars(el);
+      gsap.fromTo($$('.ch', el),
+        { yPercent: 118, rotate: 8, opacity: 0 },
+        { yPercent: 0, rotate: 0, opacity: 1, duration: 1.05, ease: 'expo.out', stagger: { amount: 0.5, from: 'start' },
+          scrollTrigger: { trigger: el, start: 'top 92%', once: true } });
     });
 
-    $$('[data-reveal]', root).forEach((el) => {
+    /* Blocks: a long throw with a slight counter-rotation. */
+    $$('[data-reveal]', R).forEach((el) => {
       if (el.dataset.revealed) return;
       el.dataset.revealed = '1';
-      gsap.to(el, {
-        opacity: 1,
-        y: 0,
-        duration: 0.8,
-        ease: 'power3.out',
-        scrollTrigger: { trigger: el, start: 'top 86%', once: true },
+      gsap.fromTo(el, { y: 70, opacity: 0, rotate: 0.4 },
+        { y: 0, opacity: 1, rotate: 0, duration: 1.05, ease: 'expo.out',
+          scrollTrigger: { trigger: el, start: 'top 88%', once: true } });
+    });
+
+    /* Staggered groups — cards deal in like a hand, from random. */
+    const groups = new Map();
+    $$('[data-stagger]', R).forEach((el) => {
+      if (el.dataset.revealed) return;
+      el.dataset.revealed = '1';
+      const key = el.parentElement;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(el);
+    });
+    groups.forEach((els, parent) => {
+      gsap.fromTo(els, { y: 90, opacity: 0, scale: 0.94 },
+        { y: 0, opacity: 1, scale: 1, duration: 1.1, ease: 'expo.out',
+          stagger: { amount: Math.min(0.6, els.length * 0.08), from: 'start' },
+          scrollTrigger: { trigger: parent, start: 'top 85%', once: true } });
+    });
+
+    /* Photo reveal: the frame unmasks upward while the picture settles back
+       from an over-scale — the frame moves faster than the image inside it. */
+    $$('[data-reveal-media]', R).forEach((el) => {
+      if (el.dataset.revealed) return;
+      el.dataset.revealed = '1';
+      const inner = $('.media__inner, .card__inner', el) || el.firstElementChild;
+      const tl = gsap.timeline({ scrollTrigger: { trigger: el, start: 'top 92%', once: true } });
+      tl.fromTo(el, { clipPath: 'inset(0% 0% 100% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.25, ease: 'expo.out' });
+      /* scale only — [data-parallax] owns yPercent on this same element */
+      if (inner) tl.fromTo(inner, { scale: 1.35 }, { scale: 1, duration: 1.6, ease: 'expo.out' }, 0);
+    });
+
+    /* Continuous parallax inside every frame, tied to scroll position. */
+    $$('[data-parallax]', R).forEach((el) => {
+      if (el.dataset.parallaxed) return;
+      el.dataset.parallaxed = '1';
+      gsap.fromTo(el, { yPercent: -6 }, { yPercent: 6, ease: 'none',
+        scrollTrigger: { trigger: el.closest('.media, .card__media') || el, start: 'top bottom', end: 'bottom top', scrub: true } });
+    });
+
+    /* Curtain: a band wipes open across the viewport as it arrives. */
+    $$('[data-curtain]', R).forEach((el) => {
+      if (el.dataset.revealed) return;
+      el.dataset.revealed = '1';
+      gsap.fromTo(el, { clipPath: 'inset(0% 50% 0% 50%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.3, ease: 'expo.out',
+        scrollTrigger: { trigger: el, start: 'top 88%', once: true } });
+    });
+
+    /* Counters roll up when their band arrives. */
+    $$('[data-count-to]', R).forEach((el) => {
+      if (el.dataset.counted) return;
+      el.dataset.counted = '1';
+      const to = parseFloat(el.dataset.countTo);
+      const obj = { v: 0 };
+      gsap.to(obj, { v: to, duration: 1.6, ease: 'expo.out',
+        onUpdate: () => { el.textContent = Math.round(obj.v); },
+        scrollTrigger: { trigger: el, start: 'top 92%', once: true } });
+    });
+
+    initMagnetic(R);
+    initRails(R);
+    /* rebuilt here, not only on mount: filters and search replace these nodes */
+    skewSetter = gsap.quickSetter($$('[data-skew]'), 'skewY', 'deg');
+  }
+
+  /* Buttons lean toward the cursor. */
+  function initMagnetic(root) {
+    if (!ANIM || isPhone()) return;
+    $$('[data-magnetic]', root).forEach((el) => {
+      if (el.dataset.magnetised) return;
+      el.dataset.magnetised = '1';
+      const xTo = gsap.quickTo(el, 'x', { duration: 0.5, ease: 'power3' });
+      const yTo = gsap.quickTo(el, 'y', { duration: 0.5, ease: 'power3' });
+      el.addEventListener('mousemove', (e) => {
+        const r = el.getBoundingClientRect();
+        xTo((e.clientX - (r.left + r.width / 2)) * 0.32);
+        yTo((e.clientY - (r.top + r.height / 2)) * 0.5);
       });
-    });
-
-    /* The photo reveal: the frame unmasks upward while the image inside
-       settles back from an over-scale. Gives weight to editorial imagery
-       without a parallax gimmick. */
-    $$('[data-reveal-media]', root).forEach((el) => {
-      if (el.dataset.revealed) return;
-      el.dataset.revealed = '1';
-      const img = el.firstElementChild;
-      const tl = gsap.timeline({ scrollTrigger: { trigger: el, start: 'top 90%', once: true } });
-      tl.to(el, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.1, ease: 'expo.out' });
-      if (img) tl.to(img, { scale: 1, duration: 1.4, ease: 'expo.out' }, 0);
+      el.addEventListener('mouseleave', () => { xTo(0); yTo(0); });
     });
   }
 
+  /* Pinned horizontal rail: the page stops, the row runs sideways. */
+  function initRails(root) {
+    if (!ANIM) return;
+    $$('[data-hscroll]', root).forEach((section) => {
+      if (section.dataset.railed) return;
+      section.dataset.railed = '1';
+      const track = $('[data-hscroll-track]', section);
+      if (!track) return;
+      const distance = () => Math.max(0, track.scrollWidth - window.innerWidth + 64);
+      gsap.to(track, {
+        x: () => -distance(), ease: 'none',
+        scrollTrigger: {
+          trigger: section, start: 'top top', end: () => '+=' + (distance() + window.innerHeight * 0.4),
+          pin: true, scrub: 0.8, anticipatePin: 1, invalidateOnRefresh: true,
+        },
+      });
+    });
+  }
+
+  /* Hero: pinned, the film scales down and clips into a frame while the
+     type climbs out of view. This is the first thing anyone sees. */
   function heroAnimation(container) {
     const hero = $('.hero', container);
     if (!hero || !ANIM) return;
-
-    const img = $('.hero__media img', hero);
+    const media = $('.hero__media', hero);
+    const film = $('.hero__film', hero);
     const body = $('.hero__body', hero);
 
-    gsap.fromTo(img, { scale: 1.16 }, { scale: 1.06, duration: 2.2, ease: 'expo.out' });
-    gsap.fromTo(
-      $$('.hero__body > *', hero),
-      { y: 34, opacity: 0 },
-      { y: 0, opacity: 1, duration: 1, ease: 'power3.out', stagger: 0.09, delay: 0.15 }
-    );
+    gsap.fromTo(film, { scale: 1.5, filter: 'blur(14px)' }, { scale: 1.06, filter: 'blur(0px)', duration: 2, ease: 'expo.out' });
+    gsap.fromTo($$('.hero__body > *', hero), { y: 90, opacity: 0, skewY: 4 },
+      { y: 0, opacity: 1, skewY: 0, duration: 1.3, ease: 'expo.out', stagger: 0.1, delay: 0.2 });
+    gsap.fromTo($('.hero__scroll', hero), { opacity: 0 }, { opacity: 1, duration: 0.8, delay: 1.4 });
 
-    /* Slow drift + fade as the hero scrolls away. */
-    gsap.to(img, { yPercent: 12, ease: 'none', scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: true } });
-    gsap.to(body, { yPercent: -18, opacity: 0.15, ease: 'none', scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: true } });
+    const tl = gsap.timeline({
+      scrollTrigger: { trigger: hero, start: 'top top', end: '+=' + Math.round(window.innerHeight * 1.15), pin: true, scrub: 0.7, anticipatePin: 1, invalidateOnRefresh: true },
+    });
+    tl.to(media, { clipPath: 'inset(12% 14% 12% 14%)', ease: 'none' }, 0)
+      .to(film, { scale: 1.24, ease: 'none' }, 0)
+      .to(body, { yPercent: -70, opacity: 0, ease: 'none' }, 0)
+      .to($('.hero__scroll', hero), { opacity: 0, ease: 'none' }, 0);
   }
 
+  /* Marquee: speed and direction follow the scroll. */
+  let marqueeTweens = [];
   function marqueeAnimation(container) {
     $$('.marquee', container).forEach((node) => {
       const track = $('.marquee__track', node);
       if (!track) return;
-
-      /* Wrap the authored items into one run, then clone the run — tiling a
-         measured run is what makes the wrap-around invisible; scrolling a
-         doubled innerHTML by -50% lands half a gap off. */
       if (!track.dataset.built) {
         const run = document.createElement('div');
         run.className = 'marquee__run';
         while (track.firstChild) run.appendChild(track.firstChild);
         track.appendChild(run);
-        /* Enough clones to overflow even an ultrawide viewport. */
-        const copies = Math.max(1, Math.ceil(window.innerWidth / Math.max(run.offsetWidth, 1)));
+        const copies = Math.max(2, Math.ceil((window.innerWidth * 2) / Math.max(run.offsetWidth, 1)));
         for (let i = 0; i < copies; i++) track.appendChild(run.cloneNode(true));
         track.dataset.built = '1';
       }
-
       if (!ANIM) return;
       const run = $('.marquee__run', track);
-      const distance = run.offsetWidth;
+      const dist = run.offsetWidth;
       gsap.killTweensOf(track);
       gsap.set(track, { x: 0 });
-      gsap.to(track, { x: -distance, duration: distance / 55, ease: 'none', repeat: -1 });
+      const tw = gsap.to(track, { x: -dist, duration: dist / 90, ease: 'none', repeat: -1 });
+      marqueeTweens.push(tw);
     });
   }
 
-  /* ───────────────────────────  chrome  ─────────────────────────── */
+  /* ── scroll-driven global effects ──────────────────────────────── */
 
   const nav = $('.nav');
-  let lastScroll = 0;
+  const progress = (() => {
+    let bar = $('.scrollbar');
+    if (!bar) { bar = document.createElement('div'); bar.className = 'scrollbar'; bar.innerHTML = '<span></span>'; document.body.appendChild(bar); }
+    return bar.firstElementChild;
+  })();
+
+  let lastScroll = 0, lastTime = 0, velocity = 0;
+  let skewSetter = null, progressSetter = null;
 
   function onScroll() {
     const y = window.scrollY;
+    const now = performance.now();
+    const dt = Math.max(1, now - lastTime);
+    velocity = ((y - lastScroll) / dt) * 16;
+    lastTime = now;
+
     const hero = $('.hero');
     if (nav) {
-      const overHero = !!hero && y < hero.offsetHeight - nav.offsetHeight - 8;
+      const overHero = !!hero && y < hero.offsetHeight * 0.55;
       nav.classList.toggle('is-over-hero', overHero);
-      /* Hide on the way down, reveal on the way up — but never over the hero. */
-      nav.classList.toggle('is-hidden', !overHero && y > 200 && y > lastScroll);
+      nav.classList.toggle('is-hidden', !overHero && y > 240 && y > lastScroll);
     }
     lastScroll = y;
+
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    const pct = max > 0 ? y / max : 0;
+    if (progressSetter) progressSetter(pct); else progress.style.transform = 'scaleX(' + pct + ')';
+  }
+
+  /* Everything tagged [data-skew] leans with the scroll velocity. */
+  function tickSkew() {
+    if (!ANIM) return;
+    const clamped = gsap.utils.clamp(-9, 9, velocity * 0.55);
+    if (skewSetter) skewSetter(clamped);
+    velocity *= 0.86;
   }
 
   function setActiveNav() {
     const here = (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
     $$('.nav__link').forEach((a) => {
-      const target = a.getAttribute('href').split('?')[0].toLowerCase();
-      a.classList.toggle('is-active', target === here || (a.dataset.alsoActiveOn || '').split(' ').includes(here));
+      const t = a.getAttribute('href').split('?')[0].toLowerCase();
+      a.classList.toggle('is-active', t === here || (a.dataset.alsoActiveOn || '').split(' ').includes(here));
     });
   }
 
   function wireMobileNav() {
-    const toggle = $('.nav__toggle');
-    const links = $('.nav__links');
+    const toggle = $('.nav__toggle'), links = $('.nav__links');
     if (!toggle || !links || toggle.dataset.wired) return;
     toggle.dataset.wired = '1';
     toggle.addEventListener('click', () => {
       const open = links.classList.toggle('is-open');
       toggle.setAttribute('aria-expanded', String(open));
       toggle.textContent = open ? 'Close' : 'Menu';
+      if (ANIM && open) gsap.fromTo($$('.nav__link', links), { x: -30, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, ease: 'expo.out', stagger: 0.05 });
     });
     links.addEventListener('click', (e) => {
-      if (e.target.closest('a')) {
-        links.classList.remove('is-open');
-        toggle.setAttribute('aria-expanded', 'false');
-        toggle.textContent = 'Menu';
-      }
+      if (e.target.closest('a')) { links.classList.remove('is-open'); toggle.setAttribute('aria-expanded', 'false'); toggle.textContent = 'Menu'; }
     });
   }
 
-  /* Delegated so it survives every container swap and every re-render. */
+  /* ── delegated interaction ─────────────────────────────────────── */
+
   document.addEventListener('click', (e) => {
     const add = e.target.closest('[data-add-bag]');
     if (add) {
-      const id = add.dataset.addBag;
-      const p = productById(id);
+      const id = add.dataset.addBag, p = productById(id);
       if (!store.has('bag', id)) store.toggle('bag', id);
+      if (ANIM) gsap.fromTo(add, { scale: 0.94 }, { scale: 1, duration: 0.5, ease: 'elastic.out(1,0.5)' });
       toast(p ? p.name + ' added to bag' : 'Added to bag');
       return;
     }
-
     const rm = e.target.closest('[data-remove-bag]');
     if (rm) {
-      store.remove('bag', rm.dataset.removeBag);
-      const host = $('[data-render="bag"]');
-      if (host) {
-        renderers.bag(host);
-        animateIn(host);
-      }
-      toast('Removed from bag');
+      const row = rm.closest('.bagline');
+      const finish = () => { store.remove('bag', rm.dataset.removeBag); const h = $('[data-render="bag"]'); if (h) { renderers.bag(h); animateIn(h); } toast('Removed from bag'); };
+      if (ANIM && row) gsap.to(row, { x: 60, opacity: 0, duration: 0.32, ease: 'power2.in', onComplete: finish });
+      else finish();
       return;
     }
-
     const wish = e.target.closest('[data-toggle-wishlist]');
     if (wish) {
       const id = wish.dataset.toggleWishlist;
       const added = store.toggle('wishlist', id);
-      if (wish.textContent.trim() !== '×') wish.textContent = added ? 'In wishlist' : 'Add to wishlist';
-      const host = $('[data-render="wishlist"]');
-      if (host) {
-        renderers.wishlist(host);
-        animateIn(host);
-      }
+      if (wish.textContent.trim() !== '×') wish.textContent = added ? 'Saved to wishlist' : 'Add to wishlist';
+      const h = $('[data-render="wishlist"]');
+      if (h) { renderers.wishlist(h); animateIn(h); }
       toast(added ? 'Saved to wishlist' : 'Removed from wishlist');
     }
   });
 
-  /* A prototype checkout must not silently do nothing. */
   document.addEventListener('submit', (e) => {
     const form = e.target.closest('[data-demo-form]');
     if (!form) return;
@@ -579,90 +711,99 @@
     form.reset();
   });
 
-  /* ───────────────────────────  mount  ──────────────────────────── */
+  /* ═══════════════════════════  mount  ══════════════════════════ */
 
   function mount(container) {
     const root = container || document;
 
-    Object.keys(renderers).forEach((key) => {
-      $$(`[data-render="${key}"]`, root).forEach((node) => renderers[key](node));
-    });
+    Object.keys(renderers).forEach((k) => $$(`[data-render="${k}"]`, root).forEach((n) => renderers[k](n)));
 
     syncCounts();
     setActiveNav();
     wireMobileNav();
+    if (window.DysobayShop) window.DysobayShop.mount(root);
     marqueeAnimation(root);
     heroAnimation(root);
     animateIn(root);
+
+    if (ANIM) {
+      progressSetter = gsap.quickSetter(progress, 'scaleX');
+      gsap.ticker.remove(tickSkew);
+      gsap.ticker.add(tickSkew);
+    }
     onScroll();
 
-    /* Images decode after the reveal triggers are built; without this the
-       start positions are computed against a zero-height <img>. */
     if (ANIM) {
       const imgs = $$('img', root).filter((i) => !i.complete);
       let pending = imgs.length;
       if (!pending) ScrollTrigger.refresh();
       imgs.forEach((img) => {
-        const done = () => {
-          if (--pending <= 0) ScrollTrigger.refresh();
-        };
+        const done = () => { if (--pending <= 0) ScrollTrigger.refresh(); };
         img.addEventListener('load', done, { once: true });
         img.addEventListener('error', done, { once: true });
       });
-      /* Backstop: a stalled image must not strand the whole page. */
-      setTimeout(() => ScrollTrigger.refresh(), 1200);
+      setTimeout(() => ScrollTrigger.refresh(), 1400);
     }
   }
 
   function unmount() {
     if (!ANIM) return;
-    ScrollTrigger.getAll().forEach((t) => t.kill());
-    gsap.globalTimeline.getChildren().forEach((t) => t.kill());
+    /* revert:true so pin-spacers and inline pin styles do not survive the swap */
+    ScrollTrigger.getAll().forEach((t) => t.kill(true));
+    marqueeTweens.forEach((t) => t.kill());
+    marqueeTweens = [];
+    gsap.ticker.remove(tickSkew);
+    skewSetter = null;
   }
 
   window.addEventListener('scroll', onScroll, { passive: true });
-  window.addEventListener('resize', () => ANIM && ScrollTrigger.refresh(), { passive: true });
+  window.addEventListener('resize', () => { if (ANIM) ScrollTrigger.refresh(); }, { passive: true });
 
-  /* ───────────────────────────  barba  ──────────────────────────── */
+  /* ═══════════════════════════  barba  ══════════════════════════ */
 
   function initBarba() {
     window.barba.init({
       debug: false,
-      prevent: ({ el }) => el.hasAttribute('data-barba-prevent') || /\.(pdf|jpg|png|gif|zip)$/i.test(el.getAttribute('href') || ''),
-      transitions: [
-        {
-          name: 'veil',
-          /* The outgoing page is taken out of flow first — otherwise the two
-             containers stack and the document height doubles mid-swap. */
-          leave({ current }) {
-            current.container.classList.add('barba-leaving');
-            unmount();
-            if (!ANIM) return;
-            return gsap.to(current.container, { opacity: 0, y: -24, duration: 0.32, ease: 'power2.in' });
-          },
-          beforeEnter({ next }) {
-            window.scrollTo(0, 0);
-            document.title = next.container.dataset.title || document.title;
-          },
-          enter({ next }) {
-            if (!ANIM) return;
-            return gsap.fromTo(next.container, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.45, ease: 'power3.out' });
-          },
-          after({ next }) {
-            mount(next.container);
-          },
+      prevent: ({ el }) => el.hasAttribute('data-barba-prevent') || /\.(pdf|jpg|png|gif|mp4|webm|zip)$/i.test(el.getAttribute('href') || ''),
+      transitions: [{
+        name: 'wipe',
+        leave({ current }) {
+          current.container.classList.add('barba-leaving');
+          unmount();
+          if (!ANIM) return;
+          return gsap.timeline()
+            .to(current.container, { y: -60, opacity: 0, duration: 0.4, ease: 'power3.in' })
+            .fromTo('.pagewipe', { scaleY: 0, transformOrigin: 'bottom' }, { scaleY: 1, duration: 0.42, ease: 'expo.inOut' }, 0.05);
         },
-      ],
+        beforeEnter({ next }) {
+          window.scrollTo(0, 0);
+          document.title = next.container.dataset.title || document.title;
+        },
+        enter({ next }) {
+          if (!ANIM) return;
+          return gsap.timeline()
+            .to('.pagewipe', { scaleY: 0, transformOrigin: 'top', duration: 0.5, ease: 'expo.inOut' })
+            .fromTo(next.container, { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'expo.out' }, 0.1);
+        },
+        after({ next }) { mount(next.container); },
+      }],
     });
-
-    /* A same-page link (already on Collections, clicking Collections) is a
-       no-op for Barba, so re-run the chrome state by hand. */
-    window.barba.hooks.afterLeave(() => {
-      if (nav) nav.classList.remove('is-hidden');
-    });
+    window.barba.hooks.afterLeave(() => { if (nav) nav.classList.remove('is-hidden'); });
   }
 
+  window.DYSOBAY_UI = {
+    store, toast, cardHTML, animateIn, esc, ANIM, gsap, $, $$,
+    renderGrid: (node) => renderers['product-grid'](node),
+    productById,
+  };
+
   function boot() {
+    if (!$('.pagewipe')) {
+      const w = document.createElement('div');
+      w.className = 'pagewipe';
+      w.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(w);
+    }
     mount(document);
     if (CAN_BARBA) initBarba();
   }

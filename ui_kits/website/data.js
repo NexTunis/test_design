@@ -26,7 +26,7 @@ window.LOOKBOOK=[
 {src:'look-chrome-02.jpg',caption:'Color Disobedience, look 07'}
 ];
 window.JOURNAL=[
-{id:'milan-fw26',title:'Dysobay at Milan Fashion Week',date:'Sep 2026',image:'hero-runway.gif',excerpt:'A third showing on the Milan schedule, and the same rule as the first: every look walks once, then it belongs to whoever bought it.'},
+{id:'milan-fw26',title:'Dysobay at Milan Fashion Week',date:'Sep 2026',image:'hero-catwalk-poster.jpg',excerpt:'A third showing on the Milan schedule, and the same rule as the first: every look walks once, then it belongs to whoever bought it.'},
 {id:'color-disobedience',title:'Notes on Color Disobedience',date:'Feb 2025',image:'look-verdure-01.jpg',excerpt:'The SS25 collection paired fearless color combinations with the brand’s one-piece rule — a look at why the two ideas can’t be separated.'},
 {id:'atelier-tunis',title:'Inside the ateliers',date:'Nov 2024',image:'kit-collar-detail.jpg',excerpt:'Every Dysobay piece is built by hand in small tailoring workshops. A look at the people who bring each design to life, one piece at a time.'}
 ];

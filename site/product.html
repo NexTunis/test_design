@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Piece — Dysobay</title>
-<meta name="description" content="A single Dysobay piece: one size, one owner, retired the moment it sells.">
+<meta name="description" content="A single Dysobay piece: one size, one owner, retired the moment it sells. Materials, atelier, hours of work and provenance in full.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="icon" href="media/kit-x-mark.jpg">
@@ -21,11 +21,11 @@
     <a class="nav__link" href="journal.html">Journal</a>
     <a class="nav__link" href="about.html">About</a>
     <a class="nav__link" href="contact.html">Contact</a>
-    <a class="nav__link nav__link--mobile" href="search.html">Search</a>
+    <a class="nav__link nav__link--mobile" href="search.html" data-open-search>Search</a>
     <a class="nav__link nav__link--mobile" href="wishlist.html">Wishlist</a>
   </nav>
   <div class="nav__utils">
-    <a class="nav__link nav__link--desktop" href="search.html">Search</a>
+    <a class="nav__link nav__link--desktop" href="search.html" data-open-search>Search</a>
     <a class="nav__link nav__link--desktop" href="wishlist.html">Wishlist<span class="nav__count" data-wishlist-count></span></a>
     <a class="nav__link" href="cart.html">Bag<span class="nav__count" data-bag-count></span></a>
   </div>
@@ -33,21 +33,45 @@
 <div data-barba="wrapper">
 <main data-barba="container" data-barba-namespace="product" data-title="Piece — Dysobay">
 <section class="pagehead">
-  <div class="wrap">
+  <div class="wrap wrap--wide">
     <p class="small"><a class="link-underline" href="collections.html">Collections</a></p>
   </div>
 </section>
 
 <section class="section section--flush-top">
-  <div class="wrap pdp" data-render="pdp"></div>
+  <div class="wrap wrap--wide pdp" data-render="pdp"></div>
+</section>
+
+<section class="marquee marquee--paper" aria-hidden="true">
+  <div class="marquee__track">
+    <span class="marquee__item">Milan ✕3</span>
+    <span class="marquee__item">28 pieces</span>
+    <span class="marquee__item">0 restocks</span>
+    <span class="marquee__item">1 of each</span>
+    <span class="marquee__item">Dress accordingly</span>
+  </div>
 </section>
 
 <section class="section band">
   <div class="wrap stack-lg">
-    <h2 class="h2" data-reveal>Still available</h2>
-    <div class="grid grid--4" data-render="related"></div>
+    <div data-reveal>
+      <p class="eyebrow">Included with every piece</p>
+      <h2 class="h2" style="margin-top:var(--space-2)">Six things that are not extras.</h2>
+    </div>
+    <div class="grid grid--3" data-render="services"></div>
   </div>
 </section>
+
+<section class="section">
+  <div class="wrap wrap--wide stack-lg">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:var(--space-4)" data-reveal>
+      <h2 class="h2">More from <span data-related-collection>the collection</span></h2>
+      <a class="link-underline" href="collections.html">See all 28</a>
+    </div>
+    <div class="grid grid--4" data-render="related" data-skew></div>
+  </div>
+</section>
+
 </main>
 </div>
 <footer class="footer">
@@ -68,6 +92,7 @@
           <li><a href="wishlist.html">Wishlist</a></li>
           <li><a href="search.html">Search</a></li>
           <li><a href="cart.html">Bag</a></li>
+          <li><a href="checkout.html">Checkout</a></li>
         </ul>
       </div>
       <div>
@@ -101,5 +126,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@barba/core@2.9.7/dist/barba.umd.js"></script>
 <script src="assets/js/data.js"></script>
 <script src="assets/js/site.js"></script>
+<script src="assets/js/shop.js"></script>
 </body>
 </html>

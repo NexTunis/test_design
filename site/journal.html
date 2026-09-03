@@ -21,11 +21,11 @@
     <a class="nav__link" href="journal.html">Journal</a>
     <a class="nav__link" href="about.html">About</a>
     <a class="nav__link" href="contact.html">Contact</a>
-    <a class="nav__link nav__link--mobile" href="search.html">Search</a>
+    <a class="nav__link nav__link--mobile" href="search.html" data-open-search>Search</a>
     <a class="nav__link nav__link--mobile" href="wishlist.html">Wishlist</a>
   </nav>
   <div class="nav__utils">
-    <a class="nav__link nav__link--desktop" href="search.html">Search</a>
+    <a class="nav__link nav__link--desktop" href="search.html" data-open-search>Search</a>
     <a class="nav__link nav__link--desktop" href="wishlist.html">Wishlist<span class="nav__count" data-wishlist-count></span></a>
     <a class="nav__link" href="cart.html">Bag<span class="nav__count" data-bag-count></span></a>
   </div>
@@ -35,13 +35,13 @@
 <section class="pagehead">
   <div class="wrap">
     <h1 class="display" data-split>Journal</h1>
-    <p class="lede pagehead__sub" style="max-width:52ch">Notes from the atelier and the runway — why we refuse restocks, and what it costs to mean it.</p>
+    <p class="lede pagehead__sub" style="max-width:52ch">Nine pieces of writing from the atelier and the runway — why we refuse restocks, and what it costs to mean it.</p>
   </div>
 </section>
 
 <section class="section section--flush-top">
   <div class="wrap">
-    <div class="grid grid--3" data-render="journal"></div>
+    <div class="grid grid--3" data-render="journal" data-skew></div>
   </div>
 </section>
 
@@ -71,6 +71,7 @@
           <li><a href="wishlist.html">Wishlist</a></li>
           <li><a href="search.html">Search</a></li>
           <li><a href="cart.html">Bag</a></li>
+          <li><a href="checkout.html">Checkout</a></li>
         </ul>
       </div>
       <div>
@@ -104,5 +105,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@barba/core@2.9.7/dist/barba.umd.js"></script>
 <script src="assets/js/data.js"></script>
 <script src="assets/js/site.js"></script>
+<script src="assets/js/shop.js"></script>
 </body>
 </html>
