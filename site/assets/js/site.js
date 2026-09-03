@@ -82,9 +82,24 @@
 
   /* ═══════════════════════════  templates  ═══════════════════════ */
 
+  /* A phone was downloading and decoding full-size photography: 114 of 120
+     images on the collections page were over twice their display size, 70
+     megapixels in all, which is what made scrolling stutter. Every <img> the
+     renderers emit now offers a 520px WebP alongside the original. */
+  const SM = (src) => D.MEDIA + 'sm/' + src.split('/').pop().replace(/\.(jpg|png)$/i, '.webp');
+  const SIZES = {
+    card: '(max-width: 560px) 46vw, (max-width: 1100px) 30vw, 22vw',
+    wide: '(max-width: 860px) 92vw, 46vw',
+    full: '100vw',
+  };
+  function imgAttrs(src, alt, kind, lazy) {
+    return `src="${src}" srcset="${SM(src)} 520w, ${src} 1400w" sizes="${SIZES[kind] || SIZES.card}"` +
+           ` alt="${esc(alt || '')}"${lazy === false ? '' : ' loading="lazy"'} decoding="async"`;
+  }
+
   function cardHTML(p, i) {
     const c = D.collectionOf(p.collection);
-    const second = p.images[1] ? `<img class="card__alt" src="${p.images[1]}" alt="" loading="lazy" aria-hidden="true">` : '';
+    const second = p.images[1] ? `<img class="card__alt" ${imgAttrs(p.images[1], '', 'card')} aria-hidden="true">` : '';
     const flag = p.tag ? `<span class="tag tag--clay card__flag">${esc(p.tag)}</span>` : '';
     const sold = p.status === 'sold' ? '<span class="card__sold">Sold — retired</span>' : '';
     /* A button may not live inside an <a>, so the quick-view control is a
@@ -93,7 +108,7 @@
       <a class="card__link" href="product.html?id=${encodeURIComponent(p.id)}">
         <span class="card__media" data-reveal-media>
           <span class="card__inner">
-            <img src="${p.images[0]}" alt="${esc(p.name)}" loading="lazy">
+            <img ${imgAttrs(p.images[0], p.name, 'card')}>
             ${second}
           </span>
           ${flag}${sold}
@@ -113,7 +128,7 @@
 
   const mediaHTML = (src, alt, ratio, cls) =>
     `<figure class="media media--${ratio || '3x4'}${cls ? ' ' + cls : ''}" data-reveal-media>
-      <span class="media__inner"><img src="${src}" alt="${esc(alt || '')}" loading="lazy"></span>
+      <span class="media__inner"><img ${imgAttrs(src, alt, 'wide')}></span>
     </figure>`;
 
   /* ═══════════════════════════  renderers  ═══════════════════════ */
@@ -167,7 +182,7 @@
 
     lookbook(node) {
       node.innerHTML = D.LOOKBOOK.map((s, i) => `<figure class="media media--3x4 look" data-reveal-media data-look="${s.collection}" style="--i:${i % 6}">
-          <span class="media__inner"><img src="${s.src}" alt="${esc(s.caption)}" loading="lazy"></span>
+          <span class="media__inner"><img ${imgAttrs(s.src, s.caption, 'card')}></span>
           <figcaption class="look__cap">${esc(s.caption)}</figcaption>
         </figure>`).join('');
     },
@@ -199,7 +214,7 @@
       node.innerHTML = D.JOURNAL.slice(0, limit).map((j) => `<article class="card">
           <a class="card__link" href="article.html?id=${encodeURIComponent(j.id)}">
             <span class="card__media card__media--wide" data-reveal-media>
-              <span class="card__inner"><img src="${j.image}" alt="${esc(j.title)}" loading="lazy"></span>
+              <span class="card__inner"><img ${imgAttrs(j.image, j.title, 'card')}></span>
               <span class="card__cta">Read</span>
             </span>
             <span class="card__sub" style="display:block;margin-top:var(--space-4)">${esc(j.date)} · ${esc(j.read)} read</span>
@@ -292,7 +307,7 @@
         ['ctx-exhibition.jpg', 'Exhibition, Lisbon'],
       ];
       node.innerHTML = shots.map(([f, cap]) => `<figure class="media media--4x3 look" data-reveal-media>
-          <span class="media__inner"><img src="${D.MEDIA + f}" alt="${esc(cap)}" loading="lazy"></span>
+          <span class="media__inner"><img ${imgAttrs(D.MEDIA + f, cap, 'card')}></span>
           <figcaption class="look__cap">${esc(cap)}</figcaption>
         </figure>`).join('');
     },
@@ -319,7 +334,7 @@
         <h1 class="display" data-split style="margin-top:var(--space-4)">${esc(j.title)}</h1>
         <p class="lede" style="margin-top:var(--space-5);max-width:60ch">${esc(j.excerpt)}</p>
         <figure class="media media--16x9" data-reveal-media style="margin-top:var(--space-7)">
-          <span class="media__inner"><img src="${j.image}" alt="${esc(j.title)}"></span>
+          <span class="media__inner"><img ${imgAttrs(j.image, j.title, 'full', false)}></span>
         </figure>
         <div class="article" style="margin-top:var(--space-8)">
           ${body.map(([kind, text]) =>
@@ -342,7 +357,7 @@
     slider(node) {
       const list = D.PRODUCTS.filter((p) => p.status !== 'sold');
       const one = list.map((p) => `<a class="slider__item media media--3x4" href="product.html?id=${encodeURIComponent(p.id)}" aria-label="${esc(p.name)}">
-          <span class="media__inner"><img src="${p.images[0]}" alt="${esc(p.name)}" loading="lazy"></span>
+          <span class="media__inner"><img ${imgAttrs(p.images[0], p.name, 'card')}></span>
           <span class="rail__cap">${esc(p.name)} · ${D.AED(p.price)}</span>
         </a>`).join('');
       node.innerHTML = `<div class="slider__track">${one}${one}</div>`;
@@ -411,7 +426,7 @@
       node.innerHTML = `
         <div class="pdp__gallery">
           ${p.images.map((src, i) => `<figure class="media media--3x4 pdp__shot" data-reveal-media data-shot="${i}">
-              <span class="media__inner"><img src="${src}" alt="${esc(p.name)}${i ? ' — detail ' + i : ' — full look'}" ${i ? 'loading="lazy"' : ''}></span>
+              <span class="media__inner"><img ${imgAttrs(src, p.name + (i ? ' — detail ' + i : ' — full look'), 'wide', i ? true : false)}></span>
             </figure>`).join('')}
         </div>
 
@@ -486,7 +501,7 @@
       }
       const total = items.reduce((s, p) => s + p.price, 0);
       node.innerHTML = items.map((p) => `<div class="bagline" data-reveal>
-          <a class="media media--3x4" href="product.html?id=${encodeURIComponent(p.id)}"><span class="media__inner"><img src="${p.images[0]}" alt="${esc(p.name)}"></span></a>
+          <a class="media media--3x4" href="product.html?id=${encodeURIComponent(p.id)}"><span class="media__inner"><img ${imgAttrs(p.images[0], p.name, 'card')}></span></a>
           <div>
             <a class="h4" href="product.html?id=${encodeURIComponent(p.id)}">${esc(p.name)}</a>
             <p class="small" style="margin-top:var(--space-2)">Size ${esc(p.size)} · No. ${esc(p.piece)} · One piece only</p>
@@ -541,7 +556,7 @@
       const src = node.dataset.railSource;
       const list = src === 'lookbook' ? D.LOOKBOOK.slice(0, 10) : D.PRODUCTS.slice(0, 10).map((p) => ({ src: p.images[0], caption: p.name, href: 'product.html?id=' + p.id }));
       node.innerHTML = list.map((s) => {
-        const inner = `<span class="media__inner"><img src="${s.src}" alt="${esc(s.caption)}" loading="lazy"></span><span class="rail__cap">${esc(s.caption)}</span>`;
+        const inner = `<span class="media__inner"><img ${imgAttrs(s.src, s.caption, 'card')}></span><span class="rail__cap">${esc(s.caption)}</span>`;
         return s.href
           ? `<a class="media media--3x4 rail__item" href="${s.href}">${inner}</a>`
           : `<figure class="media media--3x4 rail__item">${inner}</figure>`;
@@ -742,6 +757,14 @@
         video.replaceWith(img);
       };
       video.addEventListener('error', swap);
+      /* Decoding video off-screen is pure cost on a phone. */
+      if ('IntersectionObserver' in window) {
+        new IntersectionObserver((entries) => entries.forEach((en) => {
+          if (!video.isConnected) return;
+          if (en.isIntersecting) video.play().catch(() => {});
+          else video.pause();
+        }), { threshold: 0.05 }).observe(video);
+      }
       const attempt = video.play();
       if (attempt && attempt.catch) attempt.catch(() => { if (video.readyState < 2) swap(); });
       /* Only a video that never decoded a frame counts as broken. A paused one
@@ -981,8 +1004,16 @@
     window.barba.hooks.afterLeave(() => { if (nav) nav.classList.remove('is-hidden'); });
   }
 
+  /* Reveal-on-demand for content injected outside the page container (search
+     overlay, quick view). Without this the stylesheet's clip-path base state
+     hides every photo in there for good. */
+  function showNow(root) {
+    if (!ANIM || !root) return;
+    gsap.set($$('[data-reveal-media], [data-reveal], [data-stagger]', root), { clipPath: 'none', opacity: 1, y: 0 });
+  }
+
   window.DYSOBAY_UI = {
-    store, toast, cardHTML, animateIn, esc, ANIM, gsap, $, $$,
+    store, toast, cardHTML, animateIn, showNow, esc, ANIM, gsap, $, $$,
     renderGrid: (node) => renderers['product-grid'](node),
     productById,
   };

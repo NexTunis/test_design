@@ -16,7 +16,7 @@
   const UI = window.DYSOBAY_UI;
   if (!D || !UI) return;
 
-  const { store, toast, cardHTML, animateIn, esc, ANIM, gsap, $, $$, productById } = UI;
+  const { store, toast, cardHTML, animateIn, showNow, esc, ANIM, gsap, $, $$, productById } = UI;
 
   /* ═══════════════════════════  lightbox  ═══════════════════════ */
 
@@ -136,6 +136,7 @@
       root.classList.add('is-open');
       document.body.style.overflow = 'hidden';
       open = true;
+      showNow(root);
       if (ANIM) {
         gsap.fromTo(root, { opacity: 0 }, { opacity: 1, duration: 0.28 });
         gsap.fromTo($('.qv__panel', root), { y: 70, scale: 0.97, opacity: 0 },
@@ -205,8 +206,9 @@
       summary.textContent = t
         ? `${list.length} result${list.length === 1 ? '' : 's'} for “${q.trim()}”`
         : 'Start typing, or pick a shortcut above.';
-      if (ANIM) gsap.fromTo($$('.card', results), { y: 40, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.6, ease: 'expo.out', stagger: 0.04 });
+      showNow(results);
+      if (ANIM) gsap.fromTo($$('.card', results), { y: 30, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.5, ease: 'expo.out', stagger: 0.03 });
     }
 
     function show() {

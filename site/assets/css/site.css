@@ -742,5 +742,9 @@ button { font: inherit; color: inherit; }
   /* Cheaper compositing: a phone repainting a blurred backdrop while the
      results list animates is where the frame budget goes. */
   .so { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  .so__results { grid-template-columns: repeat(2, 1fr); gap: var(--space-3); }
   .hero { height: 88svh; }
+  /* A full-viewport blend-mode layer is expensive to composite on mobile GPUs
+     and the grain is barely visible at this size anyway. */
+  .hero__grain { display: none; }
 }
