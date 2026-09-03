@@ -1,0 +1,41 @@
+# Publishes the repository root to GitHub Pages.
+#
+# Only runs when Settings -> Pages -> Source is set to "GitHub Actions". If it
+# is set to "Deploy from a branch" (main / root) instead, that path works too
+# and this workflow simply does nothing useful — either way the site is served
+# from the repo root, where .nojekyll keeps _ds_bundle.js from being dropped.
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never cancel a running deploy; queue behind it instead.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+
+      # No build step: the storefront is plain HTML/CSS/JS with CDN deps.
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

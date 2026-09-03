@@ -1,0 +1,30 @@
+:root{
+--ink:oklch(16% 0.008 40);
+--paper:oklch(97% 0.006 70);
+--clay:oklch(56% 0.11 42);
+--clay-dim:oklch(45% 0.10 42);
+--clay-tint:oklch(90% 0.03 42);
+--denim:oklch(38% 0.06 258);
+--denim-dim:oklch(30% 0.05 258);
+--denim-tint:oklch(90% 0.02 258);
+--sand:oklch(93% 0.008 65);
+--stone:oklch(52% 0.006 60);
+--stone-light:oklch(70% 0.006 60);
+--line:oklch(85% 0.006 60);
+--success:oklch(52% 0.10 145);
+--error:oklch(52% 0.14 25);
+
+--surface:var(--paper);
+--surface-alt:var(--sand);
+--surface-inverse:var(--ink);
+--text-primary:var(--ink);
+--text-secondary:var(--stone);
+--text-tertiary:var(--stone-light);
+--text-inverse:var(--paper);
+--accent-primary:var(--clay);
+--accent-primary-hover:var(--clay-dim);
+--accent-secondary:var(--denim);
+--accent-secondary-hover:var(--denim-dim);
+--border:var(--line);
+--border-strong:var(--stone-light);
+}

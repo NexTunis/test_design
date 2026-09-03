@@ -1,0 +1,38 @@
+# ─────────────────────────── OS & editors ───────────────────────────
+.DS_Store
+Thumbs.db
+*~
+.idea/
+.vscode/
+
+# ─────────────────────────── tooling state ──────────────────────────
+node_modules/
+*.log
+.remember/
+# <image-slot> writes dropped-image state here; it is per-machine.
+.image-slots.state.json
+**/.image-slots.state.json
+
+# ─────────────────────────── build artifacts ────────────────────────
+# Single-file bundle produced from components/ + ui_kits/ by the design-system
+# bundler. A committed copy goes stale the moment a source file changes, and
+# it is 2 MB of base64 — rebuild it instead of tracking it.
+Dysobay Storefront.html
+
+# ─────────────────────────── raw source drops ───────────────────────
+# 75 MB of saved Instagram pages and duplicate downloads. Nothing in the
+# storefront reads from here; the photography that IS used was curated out of
+# it into site/media/.
+uploads/
+
+# Desktop screenshots of reference sites (26 MB). Research, not brand assets.
+dysobay/Screenshot*.png
+
+# ─────────────── photography that IS used — never ignore ────────────
+# The storefront and the React kit both render these. Nothing above should
+# ever match them, and these negations make that explicit rather than assumed.
+!site/media/
+!site/media/**
+!dysobay/*.jpg
+!dysobay/*.gif
+!assets/**
