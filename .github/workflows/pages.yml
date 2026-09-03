@@ -2,7 +2,7 @@
 #
 # Only runs when Settings -> Pages -> Source is set to "GitHub Actions". If it
 # is set to "Deploy from a branch" (main / root) instead, that path works too
-# and this workflow simply does nothing useful — either way the site is served
+# and this workflow simply does nothing useful - either way the site is served
 # from the repo root, where .nojekyll keeps _ds_bundle.js from being dropped.
 name: Deploy to GitHub Pages
 
