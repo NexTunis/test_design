@@ -711,31 +711,44 @@
     });
   }
 
-  /* Pinned horizontal rail: the page stops, the row runs sideways. */
+  /* Pinned horizontal rail — desktop only, and scoped through gsap.matchMedia
+     so the pin is CREATED above the breakpoint and REVERTED below it. Checking
+     a breakpoint once at mount (what this used to do) meant a phone that had
+     ever been wider — a rotation, a resized window — kept a pin it should not
+     have, and a pin nobody scrolls is a screen-and-a-half of blank page. */
+  let railMM = null;
   function initRails(root) {
     if (!ANIM) return;
-    $$('[data-hscroll]', root).forEach((section) => {
-      if (section.dataset.railed) return;
-      section.dataset.railed = '1';
-      const track = $('[data-hscroll-track]', section);
-      if (!track) return;
-      const distance = () => Math.max(0, track.scrollWidth - window.innerWidth + 64);
-      /* Pinning on a phone means the browser recalculates layout on every
-         scroll frame — the single biggest cause of stutter. Below the tablet
-         breakpoint the rail just scrolls horizontally by touch instead. */
-      if (isPhone()) {
-        section.classList.add('rail--swipe');
-        const hint = $('.rail__head p', section);
-        if (hint) hint.textContent = 'Swipe →';
-        return;
-      }
-      gsap.to(track, {
-        x: () => -distance(), ease: 'none',
-        scrollTrigger: {
-          trigger: section, start: 'top top', end: () => '+=' + (distance() + window.innerHeight * 0.4),
-          pin: true, scrub: 0.8, anticipatePin: 1, invalidateOnRefresh: true,
-        },
+    const sections = $$('[data-hscroll]', root).filter((s) => !s.dataset.railed);
+    if (!sections.length) return;
+    sections.forEach((s) => { s.dataset.railed = '1'; });
+
+    railMM = gsap.matchMedia();
+    railMM.add('(min-width: 861px)', () => {
+      const tweens = sections.map((section) => {
+        const track = $('[data-hscroll-track]', section);
+        if (!track) return null;
+        section.classList.remove('rail--swipe');
+        const distance = () => Math.max(0, track.scrollWidth - window.innerWidth + 64);
+        return gsap.to(track, {
+          x: () => -distance(), ease: 'none',
+          scrollTrigger: {
+            trigger: section, start: 'top top', end: () => '+=' + (distance() + window.innerHeight * 0.4),
+            pin: true, scrub: 0.8, anticipatePin: 1, invalidateOnRefresh: true,
+          },
+        });
+      }).filter(Boolean);
+      /* matchMedia reverts these — and their pin-spacers — on the way out. */
+      return () => tweens.forEach((tw) => tw.kill());
+    });
+
+    railMM.add('(max-width: 860px)', () => {
+      sections.forEach((s) => {
+        s.classList.add('rail--swipe');
+        const track = $('[data-hscroll-track]', s);
+        if (track) gsap.set(track, { clearProps: 'transform' });
       });
+      return () => sections.forEach((s) => s.classList.remove('rail--swipe'));
     });
   }
 
@@ -793,16 +806,18 @@
       { y: 0, opacity: 1, duration: 1.3, ease: 'expo.out', stagger: 0.1, delay: 0.2 });
     gsap.fromTo($('.hero__scroll', hero), { opacity: 0 }, { opacity: 1, duration: 0.8, delay: 1.4 });
 
-    if (isPhone()) return;   /* the pinned hero is a desktop moment only */
-
-    const tl = gsap.timeline({
-      scrollTrigger: { trigger: hero, start: 'top top', end: '+=' + Math.round(window.innerHeight * 1.15),
-        pin: true, scrub: 0.7, anticipatePin: 1, invalidateOnRefresh: true },
+    /* Desktop-only, and scoped the same way so a rotation cannot strand a pin. */
+    gsap.matchMedia().add('(min-width: 861px)', () => {
+      const tl = gsap.timeline({
+        scrollTrigger: { trigger: hero, start: 'top top', end: '+=' + Math.round(window.innerHeight * 1.15),
+          pin: true, scrub: 0.7, anticipatePin: 1, invalidateOnRefresh: true },
+      });
+      tl.fromTo(media, { clipPath: 'inset(0% 0% 0% 0%)' }, { clipPath: 'inset(12% 14% 12% 14%)', ease: 'none', immediateRender: false }, 0)
+        .fromTo(film, { scale: 1 }, { scale: 1.18, ease: 'none', immediateRender: false }, 0)
+        .fromTo(body, { yPercent: 0, opacity: 1 }, { yPercent: -70, opacity: 0, ease: 'none', immediateRender: false }, 0)
+        .to($('.hero__scroll', hero), { opacity: 0, ease: 'none' }, 0);
+      return () => tl.kill();
     });
-    tl.fromTo(media, { clipPath: 'inset(0% 0% 0% 0%)' }, { clipPath: 'inset(12% 14% 12% 14%)', ease: 'none', immediateRender: false }, 0)
-      .fromTo(film, { scale: 1 }, { scale: 1.18, ease: 'none', immediateRender: false }, 0)
-      .fromTo(body, { yPercent: 0, opacity: 1 }, { yPercent: -70, opacity: 0, ease: 'none', immediateRender: false }, 0)
-      .to($('.hero__scroll', hero), { opacity: 0, ease: 'none' }, 0);
   }
 
   /* Marquee: speed and direction follow the scroll. */
