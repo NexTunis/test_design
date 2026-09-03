@@ -209,21 +209,21 @@
         </article>`).join('');
     },
 
-    /* ── manifesto: the barcode is the index ──────────────────────── */
+    /* ── manifesto: the name is the index ─────────────────────────── */
     manifesto(node) {
       node.innerHTML = `
-        <aside class="barcode">
-          <p class="barcode__label">The manifesto, as a barcode</p>
-          <div class="barcode__bars">
-            ${D.MANIFESTO.map((l, i) => `<button type="button" class="barcode__bar" data-goto-clause="${i}" aria-label="Clause ${esc(l.n)} — ${esc(l.title)}">
-                <span style="--h:${40 + (i % 4) * 18}%"></span><span class="barcode__num">${esc(l.n)}</span>
+        <aside class="lettersidx">
+          <p class="lettersidx__label">D.Y.S.O.B.A.Y</p>
+          <div class="lettersidx__set">
+            ${D.MANIFESTO.map((l, i) => `<button type="button" class="letterbtn" data-goto-clause="${i}" aria-label="Clause ${esc(l.letter)} — ${esc(l.title)}">
+                <span class="letterbtn__ch">${esc(l.letter)}</span><span class="letterbtn__n">${esc(l.n)}</span>
               </button>`).join('')}
           </div>
-          <p class="barcode__code">4.25.19.15.2.1.25</p>
+          <p class="lettersidx__note">Each letter is its own position in the alphabet.</p>
         </aside>
         <div class="clauses">
           ${D.MANIFESTO.map((l, i) => `<article class="clause" id="clause-${i}" data-clause="${i}">
-              <p class="clause__n">${esc(l.n)}</p>
+              <p class="clause__n"><span class="clause__ch">${esc(l.letter)}</span><span class="clause__num">${esc(l.n)}</span></p>
               <div>
                 <h2 class="h2">${esc(l.title)}</h2>
                 <p class="lede" style="margin-top:var(--space-3)">${esc(l.body)}</p>
@@ -233,23 +233,19 @@
         </div>`;
 
       const clauses = $$('.clause', node);
-      const bars = $$('.barcode__bar', node);
-
-      bars.forEach((b, i) => b.addEventListener('click', () => {
+      const letters = $$('.letterbtn', node);
+      letters.forEach((b, i) => b.addEventListener('click', () => {
         clauses[i].scrollIntoView({ behavior: ANIM ? 'smooth' : 'auto', block: 'center' });
       }));
 
       if (!ANIM) return;
-
       clauses.forEach((cl) => {
         gsap.fromTo($('.clause__rule', cl), { scaleX: 0 }, { scaleX: 1, duration: 1.2, ease: 'expo.out',
           scrollTrigger: { trigger: cl, start: 'top 78%', once: true } });
       });
 
-      /* Nearest-to-the-middle wins, rather than one trigger window per clause:
-         the clauses are spaced apart, so straddle windows leave gaps where no
-         clause is current and the indicator blinks off. Exactly one bar is
-         always lit. */
+      /* Nearest-to-the-middle wins, so exactly one letter is lit at all times —
+         per-clause trigger windows leave gaps where none is current. */
       let current = -1;
       const sync = () => {
         const mid = window.innerHeight / 2;
@@ -262,7 +258,7 @@
         if (best === current) return;
         current = best;
         clauses.forEach((cl, i) => cl.classList.toggle('is-on', i === best));
-        bars.forEach((b, i) => {
+        letters.forEach((b, i) => {
           b.classList.toggle('is-on', i === best);
           b.classList.toggle('is-read', i < best);
         });
@@ -350,7 +346,9 @@
           <span class="rail__cap">${esc(p.name)} · ${D.AED(p.price)}</span>
         </a>`).join('');
       node.innerHTML = `<div class="slider__track">${one}${one}</div>`;
-      if (!ANIM) return;
+      /* Phones get a plain swipeable row: an infinite tween runs every frame
+         forever, which is exactly the kind of thing that makes a phone stutter. */
+      if (!ANIM || isPhone()) { node.classList.add('slider--swipe'); return; }
 
       const track = $('.slider__track', node);
       const half = track.scrollWidth / 2;
@@ -595,9 +593,16 @@
     $$('[data-split]', sec).forEach(splitChars);
     const chars = $$('[data-split] .ch', sec);
     /* Blocks move as whole units: a card is one thing, not a photo plus a price. */
-    const blocks = $$('.card, .stat, .service, .season, .manifesto-row, .bagline, .coline, .clause, .sociallink, [data-block]', sec);
+    /* [data-reveal] / [data-stagger] MUST be in this list: the stylesheet hides
+       them at opacity 0, so anything the reveal misses stays invisible for
+       good — that is what took out the contact form and the wishlist. */
+    const blocks = $$('.card, .stat, .service, .season, .press, .stockist, .manifesto-row, .bagline, .coline, .clause, .sociallink, [data-block], [data-reveal], [data-stagger]', sec);
     const inBlock = (el) => blocks.some((b) => b !== el && b.contains(el));
-    const frames = $$('[data-reveal-media], figure.media, a.media', sec);
+    /* Only the slider is excluded — it is already in motion. Frames nested
+       inside a block still unmask: the block animates y, the frame animates
+       clip-path, so they are not competing for anything. */
+    const frames = $$('[data-reveal-media], figure.media, a.media', sec)
+      .filter((el) => !el.closest('.slider'));
     const copy = $$('[data-rise], .eyebrow, .display, .h1, .h2, .h3, .h4, .lede, .brush, .btn, .link-underline, .filters, .refine, .table, .acc', sec)
       .filter((el) => !inBlock(el) && !el.closest('[data-split]'));
 
@@ -610,9 +615,9 @@
     if (copy.length) tl.fromTo(copy, { y: 46, opacity: 0 },
       { y: 0, opacity: 1, duration: 1.1, ease: 'expo.out', stagger: 0.06 }, 0.04);
     if (blocks.length) tl.fromTo(blocks, { y: 64, opacity: 0 },
-      { y: 0, opacity: 1, duration: 1.15, ease: 'expo.out', stagger: 0.07 }, 0.1);
+      { y: 0, opacity: 1, duration: 1.15, ease: 'expo.out', stagger: { amount: Math.min(0.55, blocks.length * 0.07) } }, 0.1);
     if (frames.length) tl.fromTo(frames, { clipPath: 'inset(0% 0% 100% 0%)' },
-      { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.25, ease: 'expo.out', stagger: 0.06 }, 0.12);
+      { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.25, ease: 'expo.out', stagger: { amount: Math.min(0.5, frames.length * 0.06) } }, 0.12);
 
     return tl;
   }
@@ -688,6 +693,10 @@
       const track = $('[data-hscroll-track]', section);
       if (!track) return;
       const distance = () => Math.max(0, track.scrollWidth - window.innerWidth + 64);
+      /* Pinning on a phone means the browser recalculates layout on every
+         scroll frame — the single biggest cause of stutter. Below the tablet
+         breakpoint the rail just scrolls horizontally by touch instead. */
+      if (isPhone()) { section.classList.add('rail--swipe'); return; }
       gsap.to(track, {
         x: () => -distance(), ease: 'none',
         scrollTrigger: {
@@ -717,9 +726,11 @@
       };
       video.addEventListener('error', swap);
       const attempt = video.play();
-      if (attempt && attempt.catch) attempt.catch(swap);
-      /* Still on frame zero after two seconds means it never really started. */
-      setTimeout(() => { if (video.isConnected && (video.paused || video.currentTime === 0)) swap(); }, 2200);
+      if (attempt && attempt.catch) attempt.catch(() => { if (video.readyState < 2) swap(); });
+      /* Only a video that never decoded a frame counts as broken. A paused one
+         is usually just a phone saving power, and swapping it for a 1.8 MB GIF
+         made the hero look worse than leaving it alone. */
+      setTimeout(() => { if (video.isConnected && video.readyState < 2) swap(); }, 3000);
     });
   }
 
@@ -741,6 +752,8 @@
     gsap.fromTo($$('.hero__body > *', hero), { y: 80, opacity: 0 },
       { y: 0, opacity: 1, duration: 1.3, ease: 'expo.out', stagger: 0.1, delay: 0.2 });
     gsap.fromTo($('.hero__scroll', hero), { opacity: 0 }, { opacity: 1, duration: 0.8, delay: 1.4 });
+
+    if (isPhone()) return;   /* the pinned hero is a desktop moment only */
 
     const tl = gsap.timeline({
       scrollTrigger: { trigger: hero, start: 'top top', end: '+=' + Math.round(window.innerHeight * 1.15),
@@ -923,6 +936,10 @@
           current.container.classList.add('barba-leaving');
           unmount();
           if (!ANIM) return;
+          /* A phone gets a short cross-fade instead of a full-screen ink wipe:
+             painting an opaque layer over the whole viewport twice per
+             navigation is expensive, and it reads as a stall on a small screen. */
+          if (isPhone()) return gsap.to(current.container, { opacity: 0, y: -24, duration: 0.24, ease: 'power2.in' });
           return gsap.timeline()
             .to(current.container, { y: -60, opacity: 0, duration: 0.4, ease: 'power3.in' })
             .fromTo('.pagewipe', { scaleY: 0, transformOrigin: 'bottom' }, { scaleY: 1, duration: 0.42, ease: 'expo.inOut' }, 0.05);
@@ -933,6 +950,10 @@
         },
         enter({ next }) {
           if (!ANIM) return;
+          if (isPhone()) {
+            gsap.set('.pagewipe', { scaleY: 0 });
+            return gsap.fromTo(next.container, { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.36, ease: 'power2.out' });
+          }
           return gsap.timeline()
             .to('.pagewipe', { scaleY: 0, transformOrigin: 'top', duration: 0.5, ease: 'expo.inOut' })
             .fromTo(next.container, { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'expo.out' }, 0.1);

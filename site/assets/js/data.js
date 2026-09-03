@@ -426,14 +426,24 @@ window.DYSOBAY = (function () {
     { title: 'Lifetime repair', body: 'We repair anything we made, for as long as we exist. Materials at cost, labour free — a piece that cannot be replaced should not be disposable.', meta: 'Forever' },
   ];
 
+  /* Seven clauses, one per letter of DYSOBAY. The number beside each letter is
+     that letter's position in the alphabet — D is the fourth, Y the
+     twenty-fifth — which is where 4.25.19.15.2.1.25 comes from. */
   const MANIFESTO = [
-    { n: '4', title: 'Four Foundations of Rebellion', body: 'Reject mass production. Embrace singular creation. Celebrate imperfection. Choose authenticity over approval.' },
-    { n: '25', title: 'Against Fifteen Minutes of Fame', body: 'Warhol promised everyone fifteen minutes. We promise you a lifetime of authenticity. Fame fades. We craft for the lifetime.' },
-    { n: '19', title: 'Nineteen Out of Twenty', body: 'Almost complete, but beautifully unfinished. Perfection is overrated. We celebrate the authentic incomplete.' },
-    { n: '15', title: 'Return to Why', body: 'Why do you dress? Why do you choose? Why do you stand apart? Your clothes should answer.' },
-    { n: '2', title: 'The Binary Choice', body: 'Mass or singular. Follow or lead. Safe or fearless. Choose defiance.' },
-    { n: '1', title: 'The Singular Truth', body: 'Only one piece exists. Only one you exists. Only one design per creation. Never repeated. Never replicated.' },
-    { n: '25y', title: 'The Choice Symbol', body: 'Visually, Y splits into two paths. We are the path less chosen.' },
+    { letter: 'D', n: '4', title: 'Four Foundations of Rebellion',
+      body: 'Reject mass production. Embrace singular creation. Celebrate imperfection. Choose authenticity over approval. Four rules, and the fourth one is the hardest — approval is the currency everything else in this industry is priced in.' },
+    { letter: 'Y', n: '25', title: 'Against Fifteen Minutes of Fame',
+      body: 'Warhol promised everyone fifteen minutes. We are not interested in fifteen minutes. A garment made once, for one person, is a bet on the twenty-five years after the attention has moved on.' },
+    { letter: 'S', n: '19', title: 'Nineteen Out of Twenty',
+      body: 'Almost complete, deliberately unfinished. The raw hem, the visible back seam, the brushstroke that runs off the edge and does not resolve — the twentieth part is left out on purpose, because a finished thing asks nothing of the person wearing it.' },
+    { letter: 'O', n: '15', title: 'Return to Why',
+      body: 'Why do you dress? Why do you choose? Why do you stand apart? Most clothing answers a different question — what is available, what is expected, what is on sale. Yours should answer the first one.' },
+    { letter: 'B', n: '2', title: 'The Binary Choice',
+      body: 'Mass or singular. Follow or lead. Safe or fearless. There is no third option and no gradual version: a garment is either made once or it is not, and every other decision follows from that one.' },
+    { letter: 'A', n: '1', title: 'The Singular Truth',
+      body: 'Only one piece exists. Only one you exists. One design per creation, never repeated, never replicated. When the piece sells, the pattern goes in an envelope and the design is closed.' },
+    { letter: 'Y', n: '25', title: 'The Choice Symbol',
+      body: 'The letter arrives twice, and the second time it is a fork. Y splits into two paths: the one everyone is on, and the other one. We are on the other one. That is the whole label, drawn as a single character.' },
   ];
 
   /* Counters for the stats band — value, suffix, label. */

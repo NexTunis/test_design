@@ -588,34 +588,34 @@ button { font: inherit; color: inherit; }
 }
 
 
-/* ═══════════════════════  manifesto: barcode index  ═══════════════════ */
-/* The manifesto reads back as a barcode. Here the barcode IS the index: one
-   bar per clause, it tracks reading position, and each bar jumps to its clause. */
-.manifesto { display: grid; grid-template-columns: 220px 1fr; gap: var(--space-9); align-items: start; }
-.barcode { position: sticky; top: calc(var(--space-8) + var(--space-5)); }
-.barcode__label { font-size: var(--text-caption); letter-spacing: var(--tracking-wider); text-transform: uppercase; color: var(--stone); margin-bottom: var(--space-4); }
-.barcode__bars { display: flex; align-items: flex-end; gap: 6px; height: 120px; }
-.barcode__bar {
-  flex: 1; background: none; border: 0; padding: 0; cursor: pointer;
-  display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: var(--space-2);
-  height: 100%;
+/* ═══════════════════  manifesto: the name is the index  ══════════════ */
+/* Seven letters, one per clause. Each letter's alphabet position is the
+   clause number, which is where 4.25.19.15.2.1.25 comes from. */
+.manifesto { display: grid; grid-template-columns: 230px 1fr; gap: var(--space-9); align-items: start; }
+.lettersidx { position: sticky; top: calc(var(--space-8) + var(--space-5)); }
+.lettersidx__label { font-size: var(--text-caption); letter-spacing: var(--tracking-wider); color: var(--stone); margin-bottom: var(--space-4); }
+.lettersidx__set { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.lettersidx__note { margin-top: var(--space-4); font-size: var(--text-caption); color: var(--stone-light); max-width: 26ch; line-height: var(--leading-normal); }
+.letterbtn {
+  background: none; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  cursor: pointer; padding: var(--space-2) var(--space-3);
+  display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 46px;
+  transition: border-color var(--dur-normal) var(--ease-out), background var(--dur-normal) var(--ease-out), color var(--dur-normal) var(--ease-out);
 }
-.barcode__bar span:first-child {
-  display: block; width: 100%; background: var(--line); border-radius: 1px;
-  height: var(--h, 40%);
-  transition: background var(--dur-normal) var(--ease-out), transform var(--dur-normal) var(--ease-out);
-  transform-origin: bottom; transform: scaleY(.55);
-}
-.barcode__bar.is-read span:first-child { background: var(--stone-light); transform: scaleY(.8); }
-.barcode__bar.is-on span:first-child { background: var(--clay); transform: scaleY(1); }
-.barcode__num { font-size: var(--text-caption); color: var(--stone-light); letter-spacing: .02em; }
-.barcode__bar.is-on .barcode__num { color: var(--clay); }
-.barcode__code { margin-top: var(--space-5); font-size: var(--text-caption); letter-spacing: var(--tracking-wider); color: var(--stone); }
+.letterbtn__ch { font-family: var(--font-display); font-size: var(--text-h4); line-height: 1; }
+.letterbtn__n { font-size: var(--text-caption); color: var(--stone-light); }
+.letterbtn.is-read { border-color: var(--stone-light); }
+.letterbtn.is-on { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.letterbtn.is-on .letterbtn__n { color: var(--clay); }
+.letterbtn:hover { border-color: var(--ink); }
 
 .clauses { display: flex; flex-direction: column; gap: var(--space-9); }
 .clause { display: grid; grid-template-columns: 140px 1fr; gap: var(--space-6); align-items: start; scroll-margin-top: 120px; }
-.clause__n { font-family: var(--font-display); font-size: clamp(3.5rem, 7vw, 5.5rem); line-height: .9; color: var(--line); transition: color 600ms var(--ease-out); }
-.clause.is-on .clause__n { color: var(--clay); }
+.clause__n { display: flex; align-items: baseline; gap: var(--space-3); }
+.clause__ch { font-family: var(--font-display); font-size: clamp(3.5rem, 7vw, 5.5rem); line-height: .9; color: var(--line); transition: color 600ms var(--ease-out); }
+.clause__num { font-size: var(--text-caption); letter-spacing: var(--tracking-wide); color: var(--stone-light); }
+.clause.is-on .clause__ch { color: var(--clay); }
+.clause.is-on .clause__num { color: var(--stone); }
 .clause__rule { grid-column: 1 / -1; height: 1px; background: var(--line); transform: scaleX(0); transform-origin: left; }
 
 /* ═══════════════════════  social links  ══════════════════════════════ */
@@ -688,8 +688,7 @@ button { font: inherit; color: inherit; }
 
 @media (max-width: 1100px) {
   .manifesto { grid-template-columns: 1fr; gap: var(--space-7); }
-  .barcode { position: static; }
-  .barcode__bars { height: 74px; }
+  .lettersidx { position: static; }
   .refine { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 860px) {
@@ -715,3 +714,26 @@ button { font: inherit; color: inherit; }
 .stockist--primary { border-top-color: var(--clay); }
 .stockist__city { font-size: var(--text-caption); letter-spacing: var(--tracking-wider); text-transform: uppercase; color: var(--stone); margin-bottom: var(--space-2); }
 .stockist--primary .stockist__city { color: var(--clay); }
+
+/* Phones: the rail and the slider scroll by touch instead of being pinned or
+   driven by a permanent tween — both were the source of the scroll stutter. */
+.rail--swipe .rail__track, .slider--swipe .slider__track {
+  overflow-x: auto; -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory;
+  padding-bottom: var(--space-3); width: auto;
+}
+.rail--swipe .rail__item, .slider--swipe .slider__item { scroll-snap-align: start; }
+.rail--swipe, .slider--swipe { overflow: visible; }
+.slider--swipe::before, .slider--swipe::after { display: none; }
+
+@media (max-width: 860px) {
+  .clause { grid-template-columns: 1fr; gap: var(--space-3); }
+  .clause__n { align-items: center; }
+  .clause__ch { font-size: 3rem; }
+  /* Seven letters spell the name — they must stay on one line to read as one. */
+  .lettersidx__set { display: grid; grid-template-columns: repeat(7, 1fr); gap: var(--space-1); }
+  .letterbtn { min-width: 0; padding: var(--space-2) var(--space-1); }
+  /* Cheaper compositing: a phone repainting a blurred backdrop while the
+     results list animates is where the frame budget goes. */
+  .so { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  .hero { height: 88svh; }
+}
