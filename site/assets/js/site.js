@@ -94,19 +94,26 @@
   };
   function imgAttrs(src, alt, kind, lazy) {
     return `src="${src}" srcset="${SM(src)} 520w, ${src} 1400w" sizes="${SIZES[kind] || SIZES.card}"` +
-           ` alt="${esc(alt || '')}"${lazy === false ? '' : ' loading="lazy"'} decoding="async"`;
+           ` alt="${esc(alt || '')}"${lazy === false ? '' : ' loading="lazy"'} decoding="async"` +
+           ` onload="this.closest('.media,.card__media')?.classList.add('is-loaded')"`;
   }
+  /* The frame carries the photograph's average colour, so at 30 KB/s you see
+     the composition's tone the moment layout happens instead of a box the same
+     colour as the page — which reads as missing content, not as loading. */
+  const tone = (src) => ` style="--tone:${D.toneOf(src)}"`;
 
   function cardHTML(p, i) {
     const c = D.collectionOf(p.collection);
-    const second = p.images[1] ? `<img class="card__alt" ${imgAttrs(p.images[1], '', 'card')} aria-hidden="true">` : '';
+    /* The alt frame only ever shows on hover, so a touch device should never
+       pay for it — that is half the image requests on the collections page. */
+    const second = p.images[1] && !isPhone() ? `<img class="card__alt" ${imgAttrs(p.images[1], '', 'card')} aria-hidden="true">` : '';
     const flag = p.tag ? `<span class="tag tag--clay card__flag">${esc(p.tag)}</span>` : '';
     const sold = p.status === 'sold' ? '<span class="card__sold">Sold — retired</span>' : '';
     /* A button may not live inside an <a>, so the quick-view control is a
        sibling of the link and the whole thing is wrapped in a plain div. */
     return `<div class="card" data-stagger${i != null ? ` style="--i:${i}"` : ''}>
       <a class="card__link" href="product.html?id=${encodeURIComponent(p.id)}">
-        <span class="card__media" data-reveal-media>
+        <span class="card__media" data-reveal-media${tone(p.images[0])}>
           <span class="card__inner">
             <img ${imgAttrs(p.images[0], p.name, 'card')}>
             ${second}
@@ -127,7 +134,7 @@
   }
 
   const mediaHTML = (src, alt, ratio, cls) =>
-    `<figure class="media media--${ratio || '3x4'}${cls ? ' ' + cls : ''}" data-reveal-media>
+    `<figure class="media media--${ratio || '3x4'}${cls ? ' ' + cls : ''}" data-reveal-media${tone(src)}>
       <span class="media__inner"><img ${imgAttrs(src, alt, 'wide')}></span>
     </figure>`;
 
@@ -181,7 +188,7 @@
     },
 
     lookbook(node) {
-      node.innerHTML = D.LOOKBOOK.map((s, i) => `<figure class="media media--3x4 look" data-reveal-media data-look="${s.collection}" style="--i:${i % 6}">
+      node.innerHTML = D.LOOKBOOK.map((s, i) => `<figure class="media media--3x4 look" data-reveal-media data-look="${s.collection}" style="--i:${i % 6};--tone:${D.toneOf(s.src)}">
           <span class="media__inner"><img ${imgAttrs(s.src, s.caption, 'card')}></span>
           <figcaption class="look__cap">${esc(s.caption)}</figcaption>
         </figure>`).join('');
@@ -213,7 +220,7 @@
       const limit = parseInt(node.dataset.limit, 10) || D.JOURNAL.length;
       node.innerHTML = D.JOURNAL.slice(0, limit).map((j) => `<article class="card">
           <a class="card__link" href="article.html?id=${encodeURIComponent(j.id)}">
-            <span class="card__media card__media--wide" data-reveal-media>
+            <span class="card__media card__media--wide" data-reveal-media${tone(j.image)}>
               <span class="card__inner"><img ${imgAttrs(j.image, j.title, 'card')}></span>
               <span class="card__cta">Read</span>
             </span>
@@ -306,7 +313,7 @@
         ['ctx-interior.jpg', 'Front of house'],
         ['ctx-exhibition.jpg', 'Exhibition, Lisbon'],
       ];
-      node.innerHTML = shots.map(([f, cap]) => `<figure class="media media--4x3 look" data-reveal-media>
+      node.innerHTML = shots.map(([f, cap]) => `<figure class="media media--4x3 look" data-reveal-media style="--tone:${D.toneOf(D.MEDIA + f)}">
           <span class="media__inner"><img ${imgAttrs(D.MEDIA + f, cap, 'card')}></span>
           <figcaption class="look__cap">${esc(cap)}</figcaption>
         </figure>`).join('');
@@ -356,7 +363,7 @@
     /* ── auto-moving product slider ───────────────────────────────── */
     slider(node) {
       const list = D.PRODUCTS.filter((p) => p.status !== 'sold');
-      const one = list.map((p) => `<a class="slider__item media media--3x4" href="product.html?id=${encodeURIComponent(p.id)}" aria-label="${esc(p.name)}">
+      const one = list.map((p) => `<a class="slider__item media media--3x4" href="product.html?id=${encodeURIComponent(p.id)}" aria-label="${esc(p.name)}"${tone(p.images[0])}>
           <span class="media__inner"><img ${imgAttrs(p.images[0], p.name, 'card')}></span>
           <span class="rail__cap">${esc(p.name)} · ${D.AED(p.price)}</span>
         </a>`).join('');
@@ -425,7 +432,7 @@
 
       node.innerHTML = `
         <div class="pdp__gallery">
-          ${p.images.map((src, i) => `<figure class="media media--3x4 pdp__shot" data-reveal-media data-shot="${i}">
+          ${p.images.map((src, i) => `<figure class="media media--3x4 pdp__shot" data-reveal-media data-shot="${i}"${tone(src)}>
               <span class="media__inner"><img ${imgAttrs(src, p.name + (i ? ' — detail ' + i : ' — full look'), 'wide', i ? true : false)}></span>
             </figure>`).join('')}
         </div>
@@ -501,7 +508,7 @@
       }
       const total = items.reduce((s, p) => s + p.price, 0);
       node.innerHTML = items.map((p) => `<div class="bagline" data-reveal>
-          <a class="media media--3x4" href="product.html?id=${encodeURIComponent(p.id)}"><span class="media__inner"><img ${imgAttrs(p.images[0], p.name, 'card')}></span></a>
+          <a class="media media--3x4" href="product.html?id=${encodeURIComponent(p.id)}"${tone(p.images[0])}><span class="media__inner"><img ${imgAttrs(p.images[0], p.name, 'card')}></span></a>
           <div>
             <a class="h4" href="product.html?id=${encodeURIComponent(p.id)}">${esc(p.name)}</a>
             <p class="small" style="margin-top:var(--space-2)">Size ${esc(p.size)} · No. ${esc(p.piece)} · One piece only</p>
@@ -639,7 +646,12 @@
       { y: 0, opacity: 1, duration: fast ? 0.5 : 1.15, ease: 'expo.out',
         stagger: { amount: Math.min(fast ? 0.22 : 0.55, blocks.length * 0.07) } }, fast ? 0.02 : 0.1);
     if (frames.length) {
-      if (fast) tl.fromTo(frames, { opacity: 0 }, { opacity: 1, duration: 0.4, ease: 'power2.out', stagger: { amount: 0.18 } }, 0.02);
+      /* The stylesheet clips every frame to zero height as its base state. The
+         phone path fades rather than unmasking, so it MUST clear that clip
+         itself — animating opacity alone left every photograph on every phone
+         invisible, which is not a slow connection, it is a blank site. */
+      if (fast) tl.fromTo(frames, { opacity: 0, clipPath: 'inset(0% 0% 0% 0%)' },
+        { opacity: 1, clipPath: 'inset(0% 0% 0% 0%)', duration: 0.4, ease: 'power2.out', stagger: { amount: 0.18 } }, 0.02);
       else tl.fromTo(frames, { clipPath: 'inset(0% 0% 100% 0%)' },
         { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.25, ease: 'expo.out',
           stagger: { amount: Math.min(0.5, frames.length * 0.06) } }, 0.12);

@@ -186,7 +186,7 @@ button { font: inherit; color: inherit; }
 .pagehead__sub { margin-top: var(--space-3); }
 
 /* ─────────────────────────────  media  ───────────────────────────── */
-.media { position: relative; overflow: hidden; background: var(--sand); border-radius: var(--radius-sm); }
+.media { position: relative; overflow: hidden; background: var(--tone, var(--sand)); border-radius: var(--radius-sm); }
 /* The inner wrapper exists so the frame can clip independently of the photo. */
 .media__inner { position: absolute; inset: 0; display: block; }
 .media__inner img, .media__inner video { width: 100%; height: 100%; object-fit: cover; }
@@ -220,7 +220,7 @@ button { font: inherit; color: inherit; }
 }
 .card:hover .card__qv, .card__qv:focus-visible { opacity: 1; transform: translateY(0); }
 .card__qv:hover { background: var(--clay); color: var(--paper); border-color: var(--clay); }
-.card__media { display: block; position: relative; aspect-ratio: 3 / 4; overflow: hidden; background: var(--sand); border-radius: var(--radius-sm); }
+.card__media { display: block; position: relative; aspect-ratio: 3 / 4; overflow: hidden; background: var(--tone, var(--sand)); border-radius: var(--radius-sm); }
 .card__media--wide { aspect-ratio: 4 / 3; }
 .card__inner { position: absolute; inset: 0; display: block; }
 .card__inner img { width: 100%; height: 100%; object-fit: cover; transition: transform 900ms var(--ease-out), opacity var(--dur-normal) var(--ease-out); }
@@ -751,4 +751,22 @@ button { font: inherit; color: inherit; }
   /* A full-viewport blend-mode layer is expensive to composite on mobile GPUs
      and the grain is barely visible at this size anyway. */
   .hero__grain { display: none; }
+}
+
+/* ═══════════════  loading state for photography  ══════════════════ */
+/* A frame paints its photograph's average colour immediately and runs a slow
+   sheen until the file lands. On a weak connection that is the difference
+   between "still loading" and "this site is broken". */
+.media:not(.is-loaded)::after,
+.card__media:not(.is-loaded)::after {
+  content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(100deg, transparent 20%, oklch(97% 0.006 70 / .22) 50%, transparent 80%);
+  background-size: 220% 100%;
+  animation: sheen 1.6s linear infinite;
+}
+.media.is-loaded::after, .card__media.is-loaded::after { content: none; }
+@keyframes sheen { from { background-position: 140% 0; } to { background-position: -60% 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .media:not(.is-loaded)::after, .card__media:not(.is-loaded)::after { animation: none; }
 }

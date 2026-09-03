@@ -7,6 +7,12 @@
  */
 window.DYSOBAY = (function () {
   const M = 'media/';
+
+  /* Average colour per photograph. A frame paints its picture's own tone the
+     instant layout happens, so a slow connection shows the composition rather
+     than a blank box the colour of the page. */
+  const TONE = {"ctx-exhibition.jpg":"#697a9b","ctx-interior.jpg":"#83644c","ctx-sketches.jpg":"#c3c0b7","ctx-venue-01.jpg":"#667779","ctx-venue-02.jpg":"#6b758e","ctx-venue-03.jpg":"#868b83","ctx-workshop-01.jpg":"#795d53","ctx-workshop-02.jpg":"#71645d","ctx-workshop-03.jpg":"#5e5042","ed-atelier-drape.jpg":"#baa8a2","ed-bazaar-chrome.jpg":"#8d6469","ed-brush-motion.jpg":"#b5b7b6","ed-cobalt-back.jpg":"#4f2e65","ed-coil-back.jpg":"#804522","ed-collage-block.jpg":"#643886","ed-collage-eye.jpg":"#b07d68","ed-contour-figure.jpg":"#cbb2a2","ed-coral-tangle.jpg":"#847074","ed-flare-mask.jpg":"#833c28","ed-fringe-print.jpg":"#bb9b93","ed-indigo-plume.jpg":"#7d2e21","ed-ink-coil.jpg":"#c1bec1","ed-lagoon-relief.jpg":"#8f92a4","ed-leaf-cobalt.jpg":"#28323f","ed-leap-citrus.jpg":"#324482","ed-liquid-chrome.jpg":"#a37655","ed-nothing-to-see.jpg":"#a17a60","ed-painted-gown.jpg":"#cec0bf","ed-powder-coat.jpg":"#bac5c3","ed-scored-portrait.jpg":"#a3a29c","ed-spectrum-crop.jpg":"#85615f","ed-spray-mark.jpg":"#eec8b0","ed-thread-map.jpg":"#caaead","ed-torn-suit.jpg":"#c15f73","ed-ultramarine-drape.jpg":"#ab4e6a","ed-veil-cobalt.jpg":"#b2b4c6","ed-verdant-plume.jpg":"#a08c84","ed-vogue-plume.jpg":"#a04f2c","ed-well-dressed.jpg":"#867f72","editorial-9to5.jpg":"#9a9086","hero-catwalk-poster.jpg":"#9fa09c","hero-runway-poster.jpg":"#6f6857","hero-runway-wide-poster.jpg":"#241b14","kit-barcode-alt.jpg":"#fdfdfd","kit-barcode.jpg":"#cfcfd0","kit-box-01.jpg":"#bd9d98","kit-box-02.jpg":"#c6c1cf","kit-box-03.jpg":"#d7c6c3","kit-box-open.jpg":"#c6988c","kit-brush-d.jpg":"#ed8a6e","kit-brush-x.jpg":"#9faee0","kit-buttons.jpg":"#c6c3c6","kit-card-blue.jpg":"#5766e0","kit-card-orange.jpg":"#ce836f","kit-collar-detail.jpg":"#e1dedb","kit-collar-label.jpg":"#e2dfde","kit-envelope.jpg":"#858286","kit-fingerprint.jpg":"#d5c9f8","kit-hangtag.jpg":"#d0c8d3","kit-invoice.jpg":"#0b0c14","kit-logo-nma.jpg":"#2e2130","kit-shirt-hangtag.jpg":"#e2e0de","kit-shirt-tag.jpg":"#e1dfdd","kit-swatches.jpg":"#a7acc2","kit-thankyou.jpg":"#211f58","kit-tissue.jpg":"#a3a4b4","kit-tote-blue.jpg":"#c2bfd1","kit-tote-stripe.jpg":"#d5c5c4","kit-tote.jpg":"#d1b7bb","kit-wordmark-vertical.jpg":"#eda084","kit-woven-dx.jpg":"#e2d4cf","kit-woven-label.jpg":"#e2d4cf","kit-woven-wordmark.jpg":"#d0c8ca","kit-x-blue.jpg":"#a4abdc","kit-x-mark.jpg":"#a194b7","look-chrome-01.jpg":"#1f3a87","look-chrome-02.jpg":"#e0dfde","look-denim-01.jpg":"#e3e3e5","look-denim-02.jpg":"#df7d36","look-denim-03.jpg":"#e4e3e4","look-eventail-01.jpg":"#bc774e","look-eventail-02.jpg":"#d8c1c2","look-graffiti-01.jpg":"#bcbaba","look-graffiti-02.jpg":"#d2d5dd","look-motion-01.jpg":"#2344a2","look-motion-02.jpg":"#f1f0f0","look-noir-01.jpg":"#233f8a","look-noir-02.jpg":"#aba9a9","look-verdure-01.jpg":"#c98355","look-verdure-02.jpg":"#d7d7d4","portrait-haifa.jpg":"#c8c5bc","poster-infographic.jpg":"#191315","poster-manifesto.jpg":"#180d0a"};
+  const toneOf = (src) => TONE[src.split('/').pop()] || '#e6e0d6';
   const img = (...names) => names.map((n) => M + n);
 
   /* Collections double as the season filter and the lookbook chapters. */
@@ -465,5 +471,5 @@ window.DYSOBAY = (function () {
   const AED = (n) => 'AED ' + n.toLocaleString('en-US');
   const collectionOf = (id) => COLLECTIONS.find((c) => c.id === id) || COLLECTIONS[0];
 
-  return { PRODUCTS, LOOKBOOK, JOURNAL, ARTICLE_BODIES, SOCIALS, PRESS, STOCKISTS, FAQS, CATEGORIES, COLLECTIONS, MANIFESTO, SERVICES, STATS, SIZES, AED, collectionOf, MEDIA: M };
+  return { toneOf, PRODUCTS, LOOKBOOK, JOURNAL, ARTICLE_BODIES, SOCIALS, PRESS, STOCKISTS, FAQS, CATEGORIES, COLLECTIONS, MANIFESTO, SERVICES, STATS, SIZES, AED, collectionOf, MEDIA: M };
 })();
