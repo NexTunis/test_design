@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Collections — Dysobay</title>
-<meta name="description" content="Twenty-eight Dysobay pieces, each cut once. Filter by category, season, availability and price — every one retires when it sells.">
+<meta name="description" content="Twenty-eight Dysobay pieces, each cut once. Sort and refine by season, availability and price — every one retires when it sells.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="icon" href="media/kit-x-mark.jpg">
@@ -21,11 +21,13 @@
     <a class="nav__link" href="journal.html">Journal</a>
     <a class="nav__link" href="about.html">About</a>
     <a class="nav__link" href="contact.html">Contact</a>
-    <a class="nav__link nav__link--mobile" href="search.html" data-open-search>Search</a>
     <a class="nav__link nav__link--mobile" href="wishlist.html">Wishlist</a>
   </nav>
   <div class="nav__utils">
-    <a class="nav__link nav__link--desktop" href="search.html" data-open-search>Search</a>
+    <button class="nav__search" type="button" data-open-search aria-label="Search the collection">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M12.8 12.8 17 17"/></svg>
+      <span>Search</span><kbd>/</kbd>
+    </button>
     <a class="nav__link nav__link--desktop" href="wishlist.html">Wishlist<span class="nav__count" data-wishlist-count></span></a>
     <a class="nav__link" href="cart.html">Bag<span class="nav__count" data-bag-count></span></a>
   </div>
@@ -40,10 +42,16 @@
 </section>
 
 <section class="section section--flush-top">
+  <div class="wrap"><p class="slider__hint" data-rise>Still available &mdash; hover to slow it down</p></div>
+  <div class="slider" data-render="slider" style="margin-top:var(--space-4)"></div>
+</section>
+
+<section class="section">
   <div class="wrap stack-lg">
-    <div class="filters" data-render="filters"></div>
-    <div class="refine" data-render="refine"></div>
-    <div class="grid grid--4" data-render="product-grid" data-skew></div>
+    <div class="filters__row" data-render="filters"></div>
+    <div class="toolbar" data-render="toolbar"></div>
+    <div class="refine" id="refine-panel" data-render="refine"></div>
+    <div class="grid grid--4" data-render="product-grid"></div>
   </div>
 </section>
 
@@ -55,17 +63,6 @@
     <span class="marquee__item">Zero repeats</span>
   </div>
 </section>
-
-<section class="section">
-  <div class="wrap stack-lg">
-    <div data-reveal>
-      <p class="eyebrow">The seasons</p>
-      <h2 class="h2" style="margin-top:var(--space-2)">Where each piece came from.</h2>
-    </div>
-    <div class="grid grid--4" data-render="collections"></div>
-  </div>
-</section>
-
 </main>
 </div>
 <footer class="footer">
@@ -84,7 +81,7 @@
           <li><a href="collections.html">Collections</a></li>
           <li><a href="lookbook.html">Lookbook</a></li>
           <li><a href="wishlist.html">Wishlist</a></li>
-          <li><a href="search.html">Search</a></li>
+          <li><button class="footer__linkbtn" type="button" data-open-search>Search</button></li>
           <li><a href="cart.html">Bag</a></li>
           <li><a href="checkout.html">Checkout</a></li>
         </ul>

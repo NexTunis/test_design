@@ -219,6 +219,109 @@ window.DYSOBAY = (function () {
       excerpt: 'Haifa on the decision that started the label, and the two years between quitting and the first Milan show.' },
   ];
 
+
+  /* Full article bodies — the journal is a real read, not three teaser cards. */
+  const ARTICLE_BODIES = {
+    'milan-fw26': [
+      ['p', 'The third time you show in Milan, nobody asks whether you meant it any more. They ask what you are going to do differently. The honest answer, for us, was nothing: the rule that made the first show worth watching is the rule that made this one worth watching, and it does not get easier to keep.'],
+      ['p', 'Twelve looks walked. Twelve garments existed. When the last model came off the runway there was no second set in a van outside, no size run waiting in a warehouse in Prato, no reorder window for the buyers who came backstage. What walked is what there was.'],
+      ['q', 'A show is not a catalogue. It is the only time these twelve things will ever be in the same room.'],
+      ['h', 'What that costs'],
+      ['p', 'It costs the thing every young label is told it cannot afford to lose: leverage. A buyer who loves look 07 cannot place an order for thirty of them, so the conversation ends with a piece rather than a contract. We have had that conversation eleven times now, and eleven times we have said no, and each time it has been the correct answer for slightly different reasons.'],
+      ['p', 'The first reason is arithmetic. Producing thirty of look 07 means finding a factory that will cut thirty, which means grading the pattern, which means the garment that walked stops being the garment you receive. The second reason is the one that actually matters: the person who bought look 07 bought the fact that nobody else has it. Selling twenty-nine more would be taking that back.'],
+      ['h', 'The ateliers'],
+      ['p', 'Two workshops made this collection — one in Al Quoz, one outside Tunis — and between them eleven people. The hours are printed on every product page because they are the real price of the thing: a coat that took seventy-four hours is not expensive, it is accurately costed.'],
+      ['p', 'That number is also the honest ceiling on how much we can make. There is no version of Dysobay that grows by making the same coat faster. It grows, if it grows, by making a different coat next time.'],
+    ],
+    'color-disobedience': [
+      ['p', 'Colour is the fastest way to be told you have gone too far. It is also, in a room full of black tailoring, the fastest way to be seen. Spring/Summer 25 leaned entirely on the second fact and simply accepted the first.'],
+      ['p', 'The palette came from the brand kit rather than a trend forecast: a saturated orange and a cobalt blue that had been sitting on hangtags and packaging since before there was a collection. Putting them on a garment was less a decision than an admission.'],
+      ['q', 'Fearless colour and one-of-one production are the same argument made twice.'],
+      ['h', 'Why the two ideas cannot be separated'],
+      ['p', 'A colour combination that half the room dislikes is commercially irrational at scale and completely rational at a scale of one. You are not trying to find a thousand people who will wear acid green against fuchsia. You are trying to find the one who has been waiting for it.'],
+      ['p', 'That is the whole economic case for one-of-one production, and colour is where it shows most plainly. Every mass-market palette is a compromise between the people who would love it and the people who would merely tolerate it. Remove the second group and the compromise disappears.'],
+      ['h', 'The pieces'],
+      ['p', 'Nine of the twenty-nine looks from that season are still in the archive. The Amara Cape prints across one continuous panel so the pattern never breaks at the shoulder. The Zellige Dress is assembled from hand-cut tiles that do not repeat anywhere on the body — a thing you can only do once, because the second one would not match the first.'],
+    ],
+    atelier: [
+      ['p', 'The word atelier does a lot of unearned work in fashion copy. In our case it means two rented rooms, eleven people, four industrial machines, and a kettle that has outlived three of the machines.'],
+      ['p', 'Nour runs the Dubai workshop. She trained on bridalwear, which is the only part of the industry that still routinely makes one of something, and it shows in how she thinks about structure: everything is built from the inside, and the outside is the last thing that happens.'],
+      ['q', 'If the inside is right, the outside has nowhere else to go.'],
+      ['h', 'Rania, and the hours'],
+      ['p', 'Rania\u2019s workshop outside Tunis does the hand-work — the crochet, the feather-setting, the pieces where the number of hours stops being a cost line and becomes the actual product. The Coral Tangle Knit took eighty-four hours and was worked outward from a single centre point until the yarn ran out. That is where the hem is. There was no pattern.'],
+      ['p', 'We print the hours on every product page for a reason that has nothing to do with marketing. A garment that took eighty-four hours cannot be discounted in a sale without insulting the person who made it, so publishing the number removes the option.'],
+      ['h', 'What one-of-one does to a workshop'],
+      ['p', 'It removes the worst part of the job. Nobody in either room has cut the same panel four hundred times. The trade-off is that nothing gets easier through repetition, and the first version is the only version, so the drawing has to be right before the scissors come out.'],
+    ],
+    'no-restocks': [
+      ['p', 'Three times we have been offered enough money to break the rule. The number went up each time. The answer did not.'],
+      ['h', 'The arithmetic'],
+      ['p', 'A restock is the single highest-margin thing a fashion label can do. The pattern exists, the fabric is sourced, the workshop knows the make, the photography is shot, the demand is proven. Every fixed cost has already been paid by the first run. Refusing it is refusing the only free money in the industry.'],
+      ['p', 'We refuse it because the first buyer paid for something specific, and it was not just cloth. It was the fact that the design stops with them. Reissuing the piece would be quietly repossessing the thing they actually bought.'],
+      ['q', 'The second one is not a second one. It is a different object, and it makes the first one into a first edition — which is not what anybody was sold.'],
+      ['h', 'What we do instead'],
+      ['p', 'When a piece sells, the pattern goes in an envelope with the piece number on it and the page stays up as a record rather than a waitlist. If enough people write in about a retired design, that tells us something about the next one, not about the last one.'],
+      ['p', 'It is a slower business. It is also the only version of this business that means anything.'],
+    ],
+    deadstock: [
+      ['p', 'The Collage Jacket is made entirely of panels cut from garments that already sold. Twelve of them. Every offcut in it is the leftover from a piece that has an owner.'],
+      ['h', 'Where each panel came from'],
+      ['p', 'The right front is barathea from the Torn Tuxedo. The left sleeve is the coated shell from the Warda Coat, which is why it reads matte where everything else reads dry. The back yoke is denim from the Rihla Trench. The under-collar is the last of the silk faille that the Brush Dress was painted on, which means it carries about four centimetres of a brushstroke that finishes somewhere else entirely.'],
+      ['q', 'It is the only garment we make that could not have been designed before the others existed.'],
+      ['h', 'Why not just buy fabric'],
+      ['p', 'Because the interesting constraint is not sustainability, although the jacket is that too. It is that the panels are fixed. You cannot order another metre. The pattern has to be drawn around what is physically on the table, which produces seams in places no pattern-cutter would choose and a garment that could not be repeated even if we wanted to.'],
+      ['p', 'Every collection since has kept its offcuts in a labelled box. There will be another one.'],
+    ],
+    barcode: [
+      ['p', 'A barcode is what mass production puts on a garment. It is the point at which a thing stops being a thing and becomes a row in an inventory system. Ours reads 4.25.19.15.2.1.25, and it is not scannable, because there is nothing to scan.'],
+      ['h', 'Seven numbers'],
+      ['p', 'Four foundations of rebellion. Twenty-five, against Warhol\u2019s fifteen minutes. Nineteen out of twenty — almost complete, deliberately unfinished. Fifteen, the return to why. Two, the binary choice. One, the singular truth. And twenty-five again, as Y: the letter that splits into two paths.'],
+      ['q', 'Seven arguments against making a barcode, arranged as one.'],
+      ['h', 'Why put it on the hangtag'],
+      ['p', 'Because the hangtag is exactly where the real barcode would go, and a joke that lands in the correct place is worth more than a joke that lands anywhere else. It is printed, crossed through by hand in blue, and it is the only mark on the garment that is not a size or a fibre content.'],
+      ['p', 'On the manifesto page the barcode is the index: one bar per clause, tracking how far you have read. It is the most functional the motif has ever been.'],
+    ],
+    'hand-painted': [
+      ['p', 'Most printed clothing is cut first and printed to fit. The print is drawn to the pattern, so the motif lands where the designer decided it should land, on every single unit, forever.'],
+      ['p', 'We do it the other way round. The cloth is painted flat, as a painting, and then the pattern is laid over it and cut. Wherever the brushstroke falls is where the brushstroke is.'],
+      ['q', 'The seams have to accept the result. That is the whole method.'],
+      ['h', 'What goes wrong'],
+      ['p', 'A great deal. A stroke that reads beautifully on the flat can vanish into a side seam or land squarely on a bust dart. Twice we have re-cut a whole garment because the composition died the moment it went onto a body, and re-cutting means the painting is gone — you cannot paint the same one again.'],
+      ['h', 'What it buys'],
+      ['p', 'A garment where the decoration is genuinely unrepeatable rather than nominally limited. The Brush Dress has a stroke that runs off the hem and does not resolve. On a second one it would resolve somewhere else, which is another way of saying there cannot be a second one.'],
+    ],
+    sizing: [
+      ['p', 'Every Dysobay piece is cut to one size. Not a size range with one size in stock — one size, drafted once, and the pattern is retired with the garment.'],
+      ['p', 'Stated plainly it sounds like a limitation, and to a shopper it often is. In an atelier it is the opposite.'],
+      ['h', 'What grading takes away'],
+      ['p', 'Grading a pattern across five sizes means every proportion becomes a rule rather than a decision. A lapel that is exactly right at FR 38 has to survive being scaled to FR 46, so it becomes a lapel that is acceptable at both and perfect at neither. Every graded garment is a compromise with four other bodies.'],
+      ['q', 'One size is not fewer options. It is the only way the proportion stays exactly where it was drawn.'],
+      ['h', 'What we do about fit'],
+      ['p', 'One alteration is included with every piece, done by the atelier that made it, and we would far rather answer a fit question before you order than take a garment back afterwards. A returned one-of-one does not go back into stock. It goes into a cupboard.'],
+      ['p', 'Write before you buy. Somebody who has actually held the piece will answer.'],
+    ],
+    leaving: [
+      ['p', 'The gap between quitting and the first Milan show was two years and one month. Most of it was not designing.'],
+      ['h', 'The decision'],
+      ['p', 'Haifa spent nineteen years in corporate roles that she was demonstrably good at and had stopped being able to explain to herself. There was no single moment. There was a long accumulation of Sunday evenings, and then a Monday where the accumulation was heavier than the salary.'],
+      ['q', 'You are way too creative for a nine to five. Somebody wrote that on a placard. It took two years to agree with it.'],
+      ['h', 'The two years'],
+      ['p', 'Six months of pattern-cutting classes. A year of finding workshops that would take an order of one and not treat it as an insult — most would not, and the two that did are the two we still work with. Four months of making things that were not good enough and one month of making three that were.'],
+      ['p', 'The label existed as a rule before it existed as a garment: one design, one piece, never repeated. Everything since has been an argument for keeping that rule when it would be easier not to.'],
+      ['h', 'What it is now'],
+      ['p', 'Three Milan showings, twenty-eight pieces in the archive, eleven people making them, and zero restocks. The last number is the only one that took discipline.'],
+    ],
+  };
+
+  const SOCIALS = [
+    { net: 'Instagram', handle: '@dysobay_', href: 'https://www.instagram.com/dysobay_/', note: 'Campaigns, backstage, the pieces as they finish' },
+    { net: 'TikTok', handle: '@dysobay', href: 'https://www.tiktok.com/@dysobay', note: 'The ateliers, in motion' },
+    { net: 'Pinterest', handle: 'Dysobay', href: 'https://www.pinterest.com/', note: 'What the collections are built from' },
+    { net: 'LinkedIn', handle: 'Haifa Ghodhbane', href: 'https://www.linkedin.com/', note: 'The business of refusing to scale' },
+    { net: 'YouTube', handle: 'Dysobay', href: 'https://www.youtube.com/', note: 'Full runway films from Milan' },
+    { net: 'Email', handle: 'hello@dysobay.com', href: 'mailto:hello@dysobay.com', note: 'A person answers, usually within two days' },
+  ];
+
   const FAQS = [
     { q: 'Why is every piece one of one?', a: 'We design once and produce once, on purpose. If you own a Dysobay piece, no one else does — that is the whole idea, not a marketing line.' },
     { q: 'Can a sold piece be remade?', a: 'No. Once a piece sells, the design is retired. We will tell you plainly when something is gone for good, and the product page stays up as a record rather than a waitlist.' },
@@ -273,5 +376,5 @@ window.DYSOBAY = (function () {
   const AED = (n) => 'AED ' + n.toLocaleString('en-US');
   const collectionOf = (id) => COLLECTIONS.find((c) => c.id === id) || COLLECTIONS[0];
 
-  return { PRODUCTS, LOOKBOOK, JOURNAL, FAQS, CATEGORIES, COLLECTIONS, MANIFESTO, SERVICES, STATS, SIZES, AED, collectionOf, MEDIA: M };
+  return { PRODUCTS, LOOKBOOK, JOURNAL, ARTICLE_BODIES, SOCIALS, FAQS, CATEGORIES, COLLECTIONS, MANIFESTO, SERVICES, STATS, SIZES, AED, collectionOf, MEDIA: M };
 })();

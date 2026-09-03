@@ -21,46 +21,52 @@
     <a class="nav__link" href="journal.html">Journal</a>
     <a class="nav__link" href="about.html">About</a>
     <a class="nav__link" href="contact.html">Contact</a>
-    <a class="nav__link nav__link--mobile" href="search.html" data-open-search>Search</a>
     <a class="nav__link nav__link--mobile" href="wishlist.html">Wishlist</a>
   </nav>
   <div class="nav__utils">
-    <a class="nav__link nav__link--desktop" href="search.html" data-open-search>Search</a>
+    <button class="nav__search" type="button" data-open-search aria-label="Search the collection">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M12.8 12.8 17 17"/></svg>
+      <span>Search</span><kbd>/</kbd>
+    </button>
     <a class="nav__link nav__link--desktop" href="wishlist.html">Wishlist<span class="nav__count" data-wishlist-count></span></a>
     <a class="nav__link" href="cart.html">Bag<span class="nav__count" data-bag-count></span></a>
   </div>
 </header>
 <div data-barba="wrapper">
 <main data-barba="container" data-barba-namespace="manifesto" data-title="Manifesto — Dysobay">
-<section class="band--ink">
-  <div class="pagehead pagehead--center">
-    <div class="wrap">
-      <p class="eyebrow">D.Y.S.O.B.A.Y &nbsp; 4.25.19.15.2.1.25</p>
-      <h1 class="display" style="margin-top:var(--space-5);transform:rotate(-3deg);color:var(--clay)" data-split>Manifesto</h1>
+<section class="pagehead">
+  <div class="wrap">
+    <p class="eyebrow">D.Y.S.O.B.A.Y &nbsp; 4.25.19.15.2.1.25</p>
+    <h1 class="display display--xl" data-split style="margin-top:var(--space-4)">Manifesto</h1>
+    <p class="lede pagehead__sub" style="max-width:54ch">Seven clauses. A barcode is what mass production puts on a garment; ours points at seven reasons not to make one. The bars on the left are the index &mdash; they track how far you have read, and they jump.</p>
+  </div>
+</section>
+
+<section class="section section--flush-top">
+  <div class="wrap wrap--mid manifesto" data-render="manifesto"></div>
+</section>
+
+<section class="section band">
+  <div class="wrap grid grid--split">
+    <figure class="media media--3x4 media--contain" data-reveal-media>
+      <span class="media__inner"><img src="media/poster-infographic.jpg" alt="The manifesto laid out as an infographic" loading="lazy"></span>
+    </figure>
+    <div class="stack" data-rise>
+      <p class="eyebrow">The barcode</p>
+      <h2 class="h2">Four foundations. Twenty-five against fifteen minutes. Nineteen out of twenty. Return to why. The binary choice. The singular truth. And Y, the letter that splits in two.</h2>
+      <p class="brush" style="font-size:clamp(2rem,4vw,3rem);color:var(--clay)">Not Mass Approved</p>
+      <p class="small">Because the masses never approve of authenticity.</p>
+      <p><a class="btn btn--lg" data-magnetic href="collections.html">Dress accordingly</a></p>
     </div>
   </div>
+</section>
 
-  <div class="section section--flush-top">
-    <div class="wrap wrap--mid stack-lg" data-render="manifesto"></div>
-  </div>
-
-  <div class="section section--flush-top">
-    <div class="wrap grid grid--split">
-      <figure class="media media--3x4 media--contain" style="background:transparent;border-color:oklch(97% 0.006 70 / .2)" data-reveal-media>
-        <img src="media/poster-infographic.jpg" alt="The manifesto laid out as an infographic" loading="lazy">
-      </figure>
-      <div class="stack" data-reveal>
-        <p class="eyebrow">The barcode</p>
-        <h2 class="h2">A barcode is what mass production puts on a garment. Ours points at seven reasons not to make one.</h2>
-        <p class="lede">Four foundations. Twenty-five against fifteen minutes. Nineteen out of twenty. Return to why. The binary choice. The singular truth. And Y, the letter that splits in two.</p>
-        <p class="brush" style="font-size:2.5rem;color:var(--paper)">Not Mass Approved</p>
-        <p class="small">Because the masses never approve of authenticity.</p>
-      </div>
-    </div>
-  </div>
-
-  <div class="section section--flush-top" style="text-align:center">
-    <a class="btn btn--onDark btn--lg" href="collections.html">Dress accordingly</a>
+<section class="marquee" aria-hidden="true">
+  <div class="marquee__track">
+    <span class="marquee__item">Not mass approved</span>
+    <span class="marquee__item">One piece</span>
+    <span class="marquee__item">Sane prices</span>
+    <span class="marquee__item">Zero repeats</span>
   </div>
 </section>
 </main>
@@ -81,7 +87,7 @@
           <li><a href="collections.html">Collections</a></li>
           <li><a href="lookbook.html">Lookbook</a></li>
           <li><a href="wishlist.html">Wishlist</a></li>
-          <li><a href="search.html">Search</a></li>
+          <li><button class="footer__linkbtn" type="button" data-open-search>Search</button></li>
           <li><a href="cart.html">Bag</a></li>
           <li><a href="checkout.html">Checkout</a></li>
         </ul>

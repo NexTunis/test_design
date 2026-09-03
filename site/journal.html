@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Journal — Dysobay</title>
-<meta name="description" content="Notes from the atelier, the runway and the argument against repeat production.">
+<meta name="description" content="Nine essays from the atelier and the runway — why we refuse restocks, what one size buys, and what it costs to mean it.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="icon" href="media/kit-x-mark.jpg">
@@ -21,11 +21,13 @@
     <a class="nav__link" href="journal.html">Journal</a>
     <a class="nav__link" href="about.html">About</a>
     <a class="nav__link" href="contact.html">Contact</a>
-    <a class="nav__link nav__link--mobile" href="search.html" data-open-search>Search</a>
     <a class="nav__link nav__link--mobile" href="wishlist.html">Wishlist</a>
   </nav>
   <div class="nav__utils">
-    <a class="nav__link nav__link--desktop" href="search.html" data-open-search>Search</a>
+    <button class="nav__search" type="button" data-open-search aria-label="Search the collection">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M12.8 12.8 17 17"/></svg>
+      <span>Search</span><kbd>/</kbd>
+    </button>
     <a class="nav__link nav__link--desktop" href="wishlist.html">Wishlist<span class="nav__count" data-wishlist-count></span></a>
     <a class="nav__link" href="cart.html">Bag<span class="nav__count" data-bag-count></span></a>
   </div>
@@ -34,23 +36,24 @@
 <main data-barba="container" data-barba-namespace="journal" data-title="Journal — Dysobay">
 <section class="pagehead">
   <div class="wrap">
-    <h1 class="display" data-split>Journal</h1>
-    <p class="lede pagehead__sub" style="max-width:52ch">Nine pieces of writing from the atelier and the runway — why we refuse restocks, and what it costs to mean it.</p>
+    <h1 class="display display--xl" data-split>Journal</h1>
+    <p class="lede pagehead__sub" style="max-width:56ch">Nine pieces of writing from the atelier and the runway &mdash; why we refuse restocks, what one size buys, and what it costs to mean it.</p>
   </div>
 </section>
 
 <section class="section section--flush-top">
   <div class="wrap">
-    <div class="grid grid--3" data-render="journal" data-skew></div>
+    <div class="grid grid--3" data-render="journal"></div>
   </div>
 </section>
 
 <section class="section band">
   <div class="wrap wrap--narrow" style="text-align:center">
-    <p class="brush" style="font-size:clamp(2rem,4vw,3rem);color:var(--clay)" data-reveal>More soon</p>
-    <p class="lede" style="margin-top:var(--space-3)" data-reveal>We publish when there is something to say, not on a content calendar.</p>
+    <p class="brush" style="font-size:clamp(2rem,4vw,3rem);color:var(--clay)">More soon</p>
+    <p class="lede" style="margin-top:var(--space-3)">We publish when there is something to say, not on a content calendar.</p>
   </div>
 </section>
+
 </main>
 </div>
 <footer class="footer">
@@ -69,7 +72,7 @@
           <li><a href="collections.html">Collections</a></li>
           <li><a href="lookbook.html">Lookbook</a></li>
           <li><a href="wishlist.html">Wishlist</a></li>
-          <li><a href="search.html">Search</a></li>
+          <li><button class="footer__linkbtn" type="button" data-open-search>Search</button></li>
           <li><a href="cart.html">Bag</a></li>
           <li><a href="checkout.html">Checkout</a></li>
         </ul>

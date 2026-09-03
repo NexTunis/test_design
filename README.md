@@ -33,14 +33,39 @@ instead, if you prefer that one.
 
 ## Storefront stack
 
-- **GSAP + ScrollTrigger** — scroll reveals, masked-word headlines, hero
-  parallax, and the photo reveal (frame unmasks upward while the image settles
-  back from an over-scale).
+- **GSAP + ScrollTrigger.** Motion is **section-level**: a section arrives once,
+  as one composed move — copy rises, blocks rise, frames unmask — and then holds
+  still. Nothing drifts, skews or parallaxes per element while you scroll, which
+  is what made cards wobble independently of each other. The only scroll-linked
+  things on the page are the pinned hero and the pinned horizontal rail, both of
+  which are deliberate full-section moments.
 - **Barba.js** — swaps only the page container, so the nav, footer and bag
   count never blink between routes.
 - No build step, no framework, no bundler. Every dependency is a CDN `<script>`.
 - Degrades all the way down: no JS → plain HTML; reduced-motion → nothing
-  animates and nothing stays hidden; `file://` → normal page loads.
+  animates and nothing stays hidden; `file://` → normal page loads. The hero
+  film falls back to the animated GIF if autoplay is refused or the video will
+  not decode.
+
+## Pages
+
+`index` · `collections` · `product` · `lookbook` · `manifesto` · `journal` ·
+`article` · `about` · `contact` · `cart` · `checkout` · `confirmation` ·
+`sizeguide` · `faq` · `wishlist`
+
+There is no search *page* — search is an overlay, opened from the nav icon or
+by pressing <kbd>/</kbd> anywhere, with a blurred backdrop and live results.
+
+Notable behaviour:
+
+- **Manifesto** — the barcode *is* the index. One bar per clause; it tracks how
+  far you have read and each bar jumps to its clause.
+- **Collections** — an auto-moving slider of what is still available (hover to
+  slow it), a single row of category chips, and sort plus a Refine disclosure
+  holding season, availability and price.
+- **Journal** — nine full essays at `article.html?id=…`, not teaser cards.
+- **Checkout** — four steps with a live fake card interface; the number is
+  Luhn-checked. Nothing is charged and nothing leaves the page.
 
 ---
 

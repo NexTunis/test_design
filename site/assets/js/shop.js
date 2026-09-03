@@ -171,15 +171,17 @@
       root.setAttribute('aria-label', 'Search');
       root.innerHTML = `
         <div class="so__panel">
-          <div class="so__bar">
-            <input class="so__input" type="search" placeholder="Search pieces, seasons, materials…" aria-label="Search the collection">
-            <button class="so__close" type="button" aria-label="Close search">Esc</button>
+          <div class="so__shell">
+            <div class="so__bar">
+              <input class="so__input" type="search" placeholder="Search pieces, seasons, materials…" aria-label="Search the collection">
+              <button class="so__close" type="button" aria-label="Close search">Esc</button>
+            </div>
+            <div class="so__suggest">
+              ${['Outerwear', 'Tailoring', 'Silk', 'Color Disobedience', 'Last piece'].map((s) => `<button type="button" class="filter" data-so-suggest="${esc(s)}">${esc(s)}</button>`).join('')}
+            </div>
+            <p class="so__summary small"></p>
+            <div class="so__results grid grid--4"></div>
           </div>
-          <div class="so__suggest">
-            ${['Outerwear', 'Tailoring', 'Silk', 'Color Disobedience', 'Last piece'].map((s) => `<button type="button" class="filter" data-so-suggest="${esc(s)}">${esc(s)}</button>`).join('')}
-          </div>
-          <p class="so__summary small"></p>
-          <div class="so__results grid grid--4"></div>
         </div>`;
       document.body.appendChild(root);
       input = $('.so__input', root);
@@ -214,8 +216,11 @@
       open = true;
       run(input.value);
       if (ANIM) {
-        gsap.fromTo(root, { opacity: 0 }, { opacity: 1, duration: 0.25 });
-        gsap.fromTo($('.so__panel', root), { yPercent: -12, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.6, ease: 'expo.out' });
+        gsap.fromTo(root, { opacity: 0, backdropFilter: 'blur(0px)' }, { opacity: 1, backdropFilter: 'blur(18px)', duration: 0.45, ease: 'power2.out' });
+        gsap.fromTo($('.so__bar', root), { y: -40, opacity: 0, scaleX: 0.92 },
+          { y: 0, opacity: 1, scaleX: 1, duration: 0.7, ease: 'expo.out' });
+        gsap.fromTo([$('.so__suggest', root), $('.so__summary', root)], { y: 24, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.6, ease: 'expo.out', stagger: 0.06, delay: 0.12 });
       }
       setTimeout(() => input.focus(), 60);
     }
@@ -246,18 +251,14 @@
     const grid = $('[data-render="product-grid"]');
     if (!grid || node.dataset.wired) return;
     node.dataset.wired = '1';
-    const prices = D.PRODUCTS.map((p) => p.price);
-    const ceiling = Math.ceil(Math.max.apply(null, prices) / 100) * 100;
+    const ceiling = Math.ceil(Math.max.apply(null, D.PRODUCTS.map((p) => p.price)) / 100) * 100;
 
     node.innerHTML = `
       <label class="refine__field">
-        <span class="field__label">Sort</span>
-        <select class="input refine__select" data-sort-select>
-          <option value="featured">Featured</option>
-          <option value="price-asc">Price — low to high</option>
-          <option value="price-desc">Price — high to low</option>
-          <option value="name-asc">Name — A to Z</option>
-          <option value="season">Season</option>
+        <span class="field__label">Season</span>
+        <select class="input refine__select" data-collection-select>
+          <option value="all">All seasons</option>
+          ${D.COLLECTIONS.map((c) => `<option value="${c.id}">${esc(c.name)} — ${esc(c.season)}</option>`).join('')}
         </select>
       </label>
       <label class="refine__field">
@@ -271,26 +272,58 @@
       <label class="refine__field refine__field--range">
         <span class="field__label">Up to <strong data-price-out>${D.AED(ceiling)}</strong></span>
         <input class="refine__range" type="range" min="800" max="${ceiling}" step="100" value="${ceiling}" data-price-range aria-label="Maximum price">
-      </label>
-      <p class="refine__count small"><strong data-piece-count>${D.PRODUCTS.length}</strong> pieces</p>`;
+      </label>`;
 
     const rerender = () => {
       UI.renderGrid(grid);
       animateIn(grid);
-      if (ANIM) gsap.fromTo($$('.card', grid), { y: 46, opacity: 0, scale: 0.96 },
-        { y: 0, opacity: 1, scale: 1, duration: 0.7, ease: 'expo.out', stagger: { amount: 0.35, from: 'start' }, overwrite: true });
     };
-
-    $('[data-sort-select]', node).addEventListener('change', (e) => { grid.dataset.sort = e.target.value; rerender(); });
+    $('[data-collection-select]', node).addEventListener('change', (e) => { grid.dataset.filterCollection = e.target.value; rerender(); });
     $('[data-avail-select]', node).addEventListener('change', (e) => { grid.dataset.filterAvailability = e.target.value; rerender(); });
-    const range = $('[data-price-range]', node);
-    const out = $('[data-price-out]', node);
+    const range = $('[data-price-range]', node), out = $('[data-price-out]', node);
     let raf;
     range.addEventListener('input', () => {
       out.textContent = D.AED(parseInt(range.value, 10));
       grid.dataset.filterMaxPrice = range.value;
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(rerender);
+    });
+  }
+
+  /* Sort + the Refine disclosure. Two controls visible, the rest on request. */
+  function mountToolbar(node) {
+    const grid = $('[data-render="product-grid"]');
+    if (!grid || node.dataset.wired) return;
+    node.dataset.wired = '1';
+    node.innerHTML = `
+      <div class="toolbar__left"><p class="small"><strong data-piece-count>${D.PRODUCTS.length}</strong> pieces, each one once</p></div>
+      <div class="toolbar__right">
+        <label class="refine__field" style="min-width:auto">
+          <span class="field__label">Sort</span>
+          <select class="input refine__select" data-sort-select>
+            <option value="featured">Featured</option>
+            <option value="price-asc">Price — low to high</option>
+            <option value="price-desc">Price — high to low</option>
+            <option value="name-asc">Name — A to Z</option>
+            <option value="season">Season</option>
+          </select>
+        </label>
+        <button type="button" class="refine__toggle" aria-expanded="false" aria-controls="refine-panel" data-refine-toggle>Refine</button>
+      </div>`;
+
+    $('[data-sort-select]', node).addEventListener('change', (e) => {
+      grid.dataset.sort = e.target.value;
+      UI.renderGrid(grid);
+      animateIn(grid);
+    });
+
+    const toggle = $('[data-refine-toggle]', node);
+    const panel = $('#refine-panel');
+    toggle.addEventListener('click', () => {
+      const open = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', String(!open));
+      panel.classList.toggle('is-open', !open);
+      if (ANIM) gsap.fromTo(panel, { height: open ? panel.scrollHeight : 0 }, { height: open ? 0 : 'auto', duration: 0.45, ease: 'expo.out' });
     });
   }
 
@@ -555,6 +588,7 @@
 
   window.DysobayShop = {
     mount(root) {
+      $$('[data-render="toolbar"]', root).forEach(mountToolbar);
       $$('[data-render="refine"]', root).forEach(mountRefine);
       $$('[data-render="checkout"]', root).forEach(mountCheckout);
       $$('[data-render="confirmation"]', root).forEach(mountConfirmation);

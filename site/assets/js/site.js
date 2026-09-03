@@ -1,9 +1,11 @@
 /* Dysobay storefront runtime.
  *
  *   1. Render the catalogue into each page's [data-render] hooks.
- *   2. Animate — GSAP + ScrollTrigger. Pinned hero, pinned horizontal
- *      galleries, scroll-velocity skew, character-level headlines, parallax
- *      inside every frame, curtain wipes, counters, magnetic buttons.
+ *   2. Animate — GSAP + ScrollTrigger. Motion is SECTION-level: a section
+ *      arrives once, as one composed move, then holds still. The only
+ *      scroll-linked things on the page are the pinned hero and the pinned
+ *      horizontal rail, both of which are deliberate full-section moments.
+ *      Nothing drifts, skews or parallaxes per element while you scroll.
  *   3. Navigate — Barba.js swaps the page container so the chrome never blinks.
  *
  * Everything degrades: with GSAP missing (or prefers-reduced-motion) nothing is
@@ -90,7 +92,7 @@
     return `<div class="card" data-stagger${i != null ? ` style="--i:${i}"` : ''}>
       <a class="card__link" href="product.html?id=${encodeURIComponent(p.id)}">
         <span class="card__media" data-reveal-media>
-          <span class="card__inner" data-parallax>
+          <span class="card__inner">
             <img src="${p.images[0]}" alt="${esc(p.name)}" loading="lazy">
             ${second}
           </span>
@@ -111,7 +113,7 @@
 
   const mediaHTML = (src, alt, ratio, cls) =>
     `<figure class="media media--${ratio || '3x4'}${cls ? ' ' + cls : ''}" data-reveal-media>
-      <span class="media__inner" data-parallax><img src="${src}" alt="${esc(alt || '')}" loading="lazy"></span>
+      <span class="media__inner"><img src="${src}" alt="${esc(alt || '')}" loading="lazy"></span>
     </figure>`;
 
   /* ═══════════════════════════  renderers  ═══════════════════════ */
@@ -147,21 +149,17 @@
       if (count) count.textContent = list.length;
     },
 
+    /* Just the categories. Season, availability and price live behind the
+       Refine disclosure so the default view stays a single clean row. */
     filters(node) {
       const target = $('[data-render="product-grid"]');
-      node.innerHTML =
-        `<div class="filters__row">${D.CATEGORIES.map((c, i) => `<button type="button" class="filter${i === 0 ? ' is-active' : ''}" data-category="${esc(c)}">${esc(c)}</button>`).join('')}</div>
-         <div class="filters__row filters__row--sub">
-           <button type="button" class="filter is-active" data-collection="all">All seasons</button>
-           ${D.COLLECTIONS.map((c) => `<button type="button" class="filter" data-collection="${c.id}">${esc(c.name)} <span class="filter__season">${esc(c.season)}</span></button>`).join('')}
-         </div>`;
+      node.innerHTML = D.CATEGORIES.map((c, i) =>
+        `<button type="button" class="filter${i === 0 ? ' is-active' : ''}" data-category="${esc(c)}">${esc(c)}</button>`).join('');
       node.addEventListener('click', (e) => {
         const btn = e.target.closest('.filter');
         if (!btn || !target) return;
-        const row = btn.closest('.filters__row');
-        $$('.filter', row).forEach((b) => b.classList.toggle('is-active', b === btn));
-        if (btn.dataset.category) target.dataset.filterCategory = btn.dataset.category;
-        if (btn.dataset.collection) target.dataset.filterCollection = btn.dataset.collection;
+        $$('.filter', node).forEach((b) => b.classList.toggle('is-active', b === btn));
+        target.dataset.filterCategory = btn.dataset.category;
         renderers['product-grid'](target);
         animateIn(target);
       });
@@ -169,7 +167,7 @@
 
     lookbook(node) {
       node.innerHTML = D.LOOKBOOK.map((s, i) => `<figure class="media media--3x4 look" data-reveal-media data-look="${s.collection}" style="--i:${i % 6}">
-          <span class="media__inner" data-parallax><img src="${s.src}" alt="${esc(s.caption)}" loading="lazy"></span>
+          <span class="media__inner"><img src="${s.src}" alt="${esc(s.caption)}" loading="lazy"></span>
           <figcaption class="look__cap">${esc(s.caption)}</figcaption>
         </figure>`).join('');
     },
@@ -198,24 +196,124 @@
 
     journal(node) {
       const limit = parseInt(node.dataset.limit, 10) || D.JOURNAL.length;
-      node.innerHTML = D.JOURNAL.slice(0, limit).map((j, i) => `<article class="card" data-stagger style="--i:${i % 3}">
-          <span class="card__media card__media--wide" data-reveal-media>
-            <span class="card__inner" data-parallax><img src="${j.image}" alt="${esc(j.title)}" loading="lazy"></span>
-          </span>
-          <p class="card__sub" style="margin-top:var(--space-4)">${esc(j.date)} · ${esc(j.read)}</p>
-          <h3 class="h3" style="margin-top:var(--space-2)">${esc(j.title)}</h3>
-          <p class="small" style="margin-top:var(--space-2);line-height:var(--leading-relaxed)">${esc(j.excerpt)}</p>
+      node.innerHTML = D.JOURNAL.slice(0, limit).map((j) => `<article class="card">
+          <a class="card__link" href="article.html?id=${encodeURIComponent(j.id)}">
+            <span class="card__media card__media--wide" data-reveal-media>
+              <span class="card__inner"><img src="${j.image}" alt="${esc(j.title)}" loading="lazy"></span>
+              <span class="card__cta">Read</span>
+            </span>
+            <span class="card__sub" style="display:block;margin-top:var(--space-4)">${esc(j.date)} · ${esc(j.read)} read</span>
+            <span class="h3" style="display:block;margin-top:var(--space-2)">${esc(j.title)}</span>
+            <span class="small" style="display:block;margin-top:var(--space-2);line-height:var(--leading-relaxed)">${esc(j.excerpt)}</span>
+          </a>
         </article>`).join('');
     },
 
+    /* ── manifesto: the barcode is the index ──────────────────────── */
     manifesto(node) {
-      node.innerHTML = D.MANIFESTO.map((l) => `<div class="manifesto-row" data-reveal>
-          <div class="manifesto-num" data-count="${esc(l.n)}">${esc(l.n)}</div>
-          <div>
-            <h2 class="h3">${esc(l.title)}</h2>
-            <p class="lede" style="margin-top:var(--space-3)">${esc(l.body)}</p>
+      node.innerHTML = `
+        <aside class="barcode">
+          <p class="barcode__label">The manifesto, as a barcode</p>
+          <div class="barcode__bars">
+            ${D.MANIFESTO.map((l, i) => `<button type="button" class="barcode__bar" data-goto-clause="${i}" aria-label="Clause ${esc(l.n)} — ${esc(l.title)}">
+                <span style="--h:${40 + (i % 4) * 18}%"></span><span class="barcode__num">${esc(l.n)}</span>
+              </button>`).join('')}
           </div>
-        </div>`).join('');
+          <p class="barcode__code">4.25.19.15.2.1.25</p>
+        </aside>
+        <div class="clauses">
+          ${D.MANIFESTO.map((l, i) => `<article class="clause" id="clause-${i}" data-clause="${i}">
+              <p class="clause__n">${esc(l.n)}</p>
+              <div>
+                <h2 class="h2">${esc(l.title)}</h2>
+                <p class="lede" style="margin-top:var(--space-3)">${esc(l.body)}</p>
+              </div>
+              <span class="clause__rule"></span>
+            </article>`).join('')}
+        </div>`;
+
+      const clauses = $$('.clause', node);
+      const bars = $$('.barcode__bar', node);
+
+      bars.forEach((b, i) => b.addEventListener('click', () => {
+        clauses[i].scrollIntoView({ behavior: ANIM ? 'smooth' : 'auto', block: 'center' });
+      }));
+
+      if (!ANIM) return;
+      clauses.forEach((cl, i) => {
+        gsap.fromTo($('.clause__rule', cl), { scaleX: 0 }, { scaleX: 1, duration: 1.2, ease: 'expo.out',
+          scrollTrigger: { trigger: cl, start: 'top 78%', once: true } });
+        ScrollTrigger.create({
+          trigger: cl, start: 'top 50%', end: 'bottom 50%',
+          onToggle: (self) => {
+            cl.classList.toggle('is-on', self.isActive);
+            bars[i].classList.toggle('is-on', self.isActive);
+          },
+          onEnter: () => bars.slice(0, i + 1).forEach((b) => b.classList.add('is-read')),
+          onLeaveBack: () => bars[i].classList.remove('is-read'),
+        });
+      });
+    },
+
+    socials(node) {
+      node.innerHTML = D.SOCIALS.map((s) => `<a class="sociallink" href="${s.href}"${s.href.startsWith('http') ? ' target="_blank" rel="noopener noreferrer"' : ''}>
+          <span class="sociallink__net">${esc(s.net)}</span>
+          <span class="sociallink__handle">${esc(s.handle)} — ${esc(s.note)}</span>
+          <span class="sociallink__go">→</span>
+        </a>`).join('');
+    },
+
+    /* ── journal article ──────────────────────────────────────────── */
+    article(node) {
+      const id = param('id');
+      const j = D.JOURNAL.find((a) => a.id === id) || D.JOURNAL[0];
+      const body = D.ARTICLE_BODIES[j.id] || [];
+      document.title = j.title + ' — Dysobay';
+      const others = D.JOURNAL.filter((a) => a.id !== j.id);
+      const next = others[(D.JOURNAL.indexOf(j)) % others.length];
+
+      node.innerHTML = `
+        <p class="article__meta"><span>${esc(j.date)}</span><span>${esc(j.read)} read</span><span>Journal</span></p>
+        <h1 class="display" data-split style="margin-top:var(--space-4)">${esc(j.title)}</h1>
+        <p class="lede" style="margin-top:var(--space-5);max-width:60ch">${esc(j.excerpt)}</p>
+        <figure class="media media--16x9" data-reveal-media style="margin-top:var(--space-7)">
+          <span class="media__inner"><img src="${j.image}" alt="${esc(j.title)}"></span>
+        </figure>
+        <div class="article" style="margin-top:var(--space-8)">
+          ${body.map(([kind, text]) =>
+            kind === 'h' ? `<h2>${esc(text)}</h2>` :
+            kind === 'q' ? `<blockquote>${esc(text)}</blockquote>` :
+                           `<p>${esc(text)}</p>`).join('')}
+        </div>
+        <div class="article" style="margin-top:var(--space-9)">
+          <div class="nextread">
+            <div>
+              <p class="card__sub">Next</p>
+              <p class="h3" style="margin-top:var(--space-2)">${esc(next.title)}</p>
+            </div>
+            <a class="btn" data-magnetic href="article.html?id=${encodeURIComponent(next.id)}">Read</a>
+          </div>
+        </div>`;
+    },
+
+    /* ── auto-moving product slider ───────────────────────────────── */
+    slider(node) {
+      const list = D.PRODUCTS.filter((p) => p.status !== 'sold');
+      const one = list.map((p) => `<a class="slider__item media media--3x4" href="product.html?id=${encodeURIComponent(p.id)}" aria-label="${esc(p.name)}">
+          <span class="media__inner"><img src="${p.images[0]}" alt="${esc(p.name)}" loading="lazy"></span>
+          <span class="rail__cap">${esc(p.name)} · ${D.AED(p.price)}</span>
+        </a>`).join('');
+      node.innerHTML = `<div class="slider__track">${one}${one}</div>`;
+      if (!ANIM) return;
+
+      const track = $('.slider__track', node);
+      const half = track.scrollWidth / 2;
+      const tw = gsap.to(track, { x: -half, duration: half / 42, ease: 'none', repeat: -1 });
+      /* Slows rather than stops, so the row never looks frozen or broken. */
+      node.addEventListener('mouseenter', () => gsap.to(tw, { timeScale: 0.18, duration: 0.5 }));
+      node.addEventListener('mouseleave', () => gsap.to(tw, { timeScale: 1, duration: 0.5 }));
+      node.addEventListener('focusin', () => gsap.to(tw, { timeScale: 0, duration: 0.3 }));
+      node.addEventListener('focusout', () => gsap.to(tw, { timeScale: 1, duration: 0.4 }));
     },
 
     stats(node) {
@@ -269,7 +367,7 @@
       node.innerHTML = `
         <div class="pdp__gallery">
           ${p.images.map((src, i) => `<figure class="media media--3x4 pdp__shot" data-reveal-media data-shot="${i}">
-              <span class="media__inner" data-parallax><img src="${src}" alt="${esc(p.name)}${i ? ' — detail ' + i : ' — full look'}" ${i ? 'loading="lazy"' : ''}></span>
+              <span class="media__inner"><img src="${src}" alt="${esc(p.name)}${i ? ' — detail ' + i : ' — full look'}" ${i ? 'loading="lazy"' : ''}></span>
             </figure>`).join('')}
         </div>
 
@@ -399,7 +497,7 @@
       const src = node.dataset.railSource;
       const list = src === 'lookbook' ? D.LOOKBOOK.slice(0, 10) : D.PRODUCTS.slice(0, 10).map((p) => ({ src: p.images[0], caption: p.name, href: 'product.html?id=' + p.id }));
       node.innerHTML = list.map((s) => {
-        const inner = `<span class="media__inner" data-parallax><img src="${s.src}" alt="${esc(s.caption)}" loading="lazy"></span><span class="rail__cap">${esc(s.caption)}</span>`;
+        const inner = `<span class="media__inner"><img src="${s.src}" alt="${esc(s.caption)}" loading="lazy"></span><span class="rail__cap">${esc(s.caption)}</span>`;
         return s.href
           ? `<a class="media media--3x4 rail__item" href="${s.href}">${inner}</a>`
           : `<figure class="media media--3x4 rail__item">${inner}</figure>`;
@@ -441,72 +539,66 @@
     el.dataset.splitDone = '1';
   }
 
+  /* One trigger per section. Everything inside arrives together, once, and
+     then sits still — no per-element parallax and no velocity skew, which is
+     what made cards wobble independently of each other while scrolling. */
+  function revealSection(sec, immediate) {
+    if (sec.dataset.revealed) return;
+    sec.dataset.revealed = '1';
+
+    $$('[data-split]', sec).forEach(splitChars);
+    const chars = $$('[data-split] .ch', sec);
+    /* Blocks move as whole units: a card is one thing, not a photo plus a price. */
+    const blocks = $$('.card, .stat, .service, .season, .manifesto-row, .bagline, .coline, .clause, .sociallink, [data-block]', sec);
+    const inBlock = (el) => blocks.some((b) => b !== el && b.contains(el));
+    const frames = $$('[data-reveal-media], figure.media, a.media', sec);
+    const copy = $$('[data-rise], .eyebrow, .display, .h1, .h2, .h3, .h4, .lede, .brush, .btn, .link-underline, .filters, .refine, .table, .acc', sec)
+      .filter((el) => !inBlock(el) && !el.closest('[data-split]'));
+
+    const tl = gsap.timeline(
+      immediate ? {} : { scrollTrigger: { trigger: sec, start: 'top 82%', once: true } }
+    );
+
+    if (chars.length) tl.fromTo(chars, { yPercent: 116, opacity: 0 },
+      { yPercent: 0, opacity: 1, duration: 1.1, ease: 'expo.out', stagger: { amount: 0.45 } }, 0);
+    if (copy.length) tl.fromTo(copy, { y: 46, opacity: 0 },
+      { y: 0, opacity: 1, duration: 1.1, ease: 'expo.out', stagger: 0.06 }, 0.04);
+    if (blocks.length) tl.fromTo(blocks, { y: 64, opacity: 0 },
+      { y: 0, opacity: 1, duration: 1.15, ease: 'expo.out', stagger: 0.07 }, 0.1);
+    if (frames.length) tl.fromTo(frames, { clipPath: 'inset(0% 0% 100% 0%)' },
+      { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.25, ease: 'expo.out', stagger: 0.06 }, 0.12);
+
+    return tl;
+  }
+
   function animateIn(root) {
     if (!ANIM) return;
     const R = root || document;
 
-    /* Headlines: characters drop in on a rotated axis, from the left. */
-    $$('[data-split]', R).forEach((el) => {
-      if (el.dataset.revealed) return;
-      el.dataset.revealed = '1';
-      splitChars(el);
-      gsap.fromTo($$('.ch', el),
-        { yPercent: 118, rotate: 8, opacity: 0 },
-        { yPercent: 0, rotate: 0, opacity: 1, duration: 1.05, ease: 'expo.out', stagger: { amount: 0.5, from: 'start' },
-          scrollTrigger: { trigger: el, start: 'top 92%', once: true } });
-    });
+    /* A re-render (filter, sort, search) plays straight away — the section it
+       lives in has already been revealed, so there is nothing to wait for. */
+    if (R !== document && !R.matches('section, .rail')) {
+      const sec = R.closest('section, .rail');
+      if (sec && sec.dataset.revealed) {
+        delete R.dataset.revealed;
+        revealSection(R, true);
+        initMagnetic(R);
+        return;
+      }
+    }
 
-    /* Blocks: a long throw with a slight counter-rotation. */
-    $$('[data-reveal]', R).forEach((el) => {
-      if (el.dataset.revealed) return;
-      el.dataset.revealed = '1';
-      gsap.fromTo(el, { y: 70, opacity: 0, rotate: 0.4 },
-        { y: 0, opacity: 1, rotate: 0, duration: 1.05, ease: 'expo.out',
-          scrollTrigger: { trigger: el, start: 'top 88%', once: true } });
+    $$('section, .rail', R).forEach((sec) => {
+      if (sec.classList.contains('hero') || sec.classList.contains('marquee')) return;
+      revealSection(sec);
     });
-
-    /* Staggered groups — cards deal in like a hand, from random. */
-    const groups = new Map();
-    $$('[data-stagger]', R).forEach((el) => {
-      if (el.dataset.revealed) return;
-      el.dataset.revealed = '1';
-      const key = el.parentElement;
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(el);
-    });
-    groups.forEach((els, parent) => {
-      gsap.fromTo(els, { y: 90, opacity: 0, scale: 0.94 },
-        { y: 0, opacity: 1, scale: 1, duration: 1.1, ease: 'expo.out',
-          stagger: { amount: Math.min(0.6, els.length * 0.08), from: 'start' },
-          scrollTrigger: { trigger: parent, start: 'top 85%', once: true } });
-    });
-
-    /* Photo reveal: the frame unmasks upward while the picture settles back
-       from an over-scale — the frame moves faster than the image inside it. */
-    $$('[data-reveal-media]', R).forEach((el) => {
-      if (el.dataset.revealed) return;
-      el.dataset.revealed = '1';
-      const inner = $('.media__inner, .card__inner', el) || el.firstElementChild;
-      const tl = gsap.timeline({ scrollTrigger: { trigger: el, start: 'top 92%', once: true } });
-      tl.fromTo(el, { clipPath: 'inset(0% 0% 100% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.25, ease: 'expo.out' });
-      /* scale only — [data-parallax] owns yPercent on this same element */
-      if (inner) tl.fromTo(inner, { scale: 1.35 }, { scale: 1, duration: 1.6, ease: 'expo.out' }, 0);
-    });
-
-    /* Continuous parallax inside every frame, tied to scroll position. */
-    $$('[data-parallax]', R).forEach((el) => {
-      if (el.dataset.parallaxed) return;
-      el.dataset.parallaxed = '1';
-      gsap.fromTo(el, { yPercent: -6 }, { yPercent: 6, ease: 'none',
-        scrollTrigger: { trigger: el.closest('.media, .card__media') || el, start: 'top bottom', end: 'bottom top', scrub: true } });
-    });
+    if (R.matches && R.matches('section, .rail')) revealSection(R);
 
     /* Curtain: a band wipes open across the viewport as it arrives. */
     $$('[data-curtain]', R).forEach((el) => {
-      if (el.dataset.revealed) return;
-      el.dataset.revealed = '1';
+      if (el.dataset.curtained) return;
+      el.dataset.curtained = '1';
       gsap.fromTo(el, { clipPath: 'inset(0% 50% 0% 50%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.3, ease: 'expo.out',
-        scrollTrigger: { trigger: el, start: 'top 88%', once: true } });
+        scrollTrigger: { trigger: el, start: 'top 86%', once: true } });
     });
 
     /* Counters roll up when their band arrives. */
@@ -515,15 +607,13 @@
       el.dataset.counted = '1';
       const to = parseFloat(el.dataset.countTo);
       const obj = { v: 0 };
-      gsap.to(obj, { v: to, duration: 1.6, ease: 'expo.out',
+      gsap.to(obj, { v: to, duration: 1.8, ease: 'expo.out',
         onUpdate: () => { el.textContent = Math.round(obj.v); },
         scrollTrigger: { trigger: el, start: 'top 92%', once: true } });
     });
 
     initMagnetic(R);
     initRails(R);
-    /* rebuilt here, not only on mount: filters and search replace these nodes */
-    skewSetter = gsap.quickSetter($$('[data-skew]'), 'skewY', 'deg');
   }
 
   /* Buttons lean toward the cursor. */
@@ -564,6 +654,29 @@
 
   /* Hero: pinned, the film scales down and clips into a frame while the
      type climbs out of view. This is the first thing anyone sees. */
+  /* Safari lists no support for VP9 and some browsers refuse autoplay outright
+     (low-power mode, data saver). Either way the hero must not freeze on a
+     poster frame — fall back to the animated GIF, which always moves. */
+  function guardHeroFilm(container) {
+    $$('video[data-film]', container).forEach((video) => {
+      const swap = () => {
+        if (video.dataset.swapped) return;
+        video.dataset.swapped = '1';
+        const gif = video.dataset.gif;
+        if (!gif) return;
+        const img = document.createElement('img');
+        img.src = gif;
+        img.alt = video.getAttribute('aria-label') || '';
+        video.replaceWith(img);
+      };
+      video.addEventListener('error', swap);
+      const attempt = video.play();
+      if (attempt && attempt.catch) attempt.catch(swap);
+      /* Still on frame zero after two seconds means it never really started. */
+      setTimeout(() => { if (video.isConnected && (video.paused || video.currentTime === 0)) swap(); }, 2200);
+    });
+  }
+
   function heroAnimation(container) {
     const hero = $('.hero', container);
     if (!hero || !ANIM) return;
@@ -572,8 +685,8 @@
     const body = $('.hero__body', hero);
 
     gsap.fromTo(film, { scale: 1.5, filter: 'blur(14px)' }, { scale: 1.06, filter: 'blur(0px)', duration: 2, ease: 'expo.out' });
-    gsap.fromTo($$('.hero__body > *', hero), { y: 90, opacity: 0, skewY: 4 },
-      { y: 0, opacity: 1, skewY: 0, duration: 1.3, ease: 'expo.out', stagger: 0.1, delay: 0.2 });
+    gsap.fromTo($$('.hero__body > *', hero), { y: 80, opacity: 0 },
+      { y: 0, opacity: 1, duration: 1.3, ease: 'expo.out', stagger: 0.1, delay: 0.2 });
     gsap.fromTo($('.hero__scroll', hero), { opacity: 0 }, { opacity: 1, duration: 0.8, delay: 1.4 });
 
     const tl = gsap.timeline({
@@ -619,15 +732,11 @@
     return bar.firstElementChild;
   })();
 
-  let lastScroll = 0, lastTime = 0, velocity = 0;
-  let skewSetter = null, progressSetter = null;
+  let lastScroll = 0;
+  let progressSetter = null;
 
   function onScroll() {
     const y = window.scrollY;
-    const now = performance.now();
-    const dt = Math.max(1, now - lastTime);
-    velocity = ((y - lastScroll) / dt) * 16;
-    lastTime = now;
 
     const hero = $('.hero');
     if (nav) {
@@ -640,14 +749,6 @@
     const max = document.documentElement.scrollHeight - window.innerHeight;
     const pct = max > 0 ? y / max : 0;
     if (progressSetter) progressSetter(pct); else progress.style.transform = 'scaleX(' + pct + ')';
-  }
-
-  /* Everything tagged [data-skew] leans with the scroll velocity. */
-  function tickSkew() {
-    if (!ANIM) return;
-    const clamped = gsap.utils.clamp(-9, 9, velocity * 0.55);
-    if (skewSetter) skewSetter(clamped);
-    velocity *= 0.86;
   }
 
   function setActiveNav() {
@@ -723,13 +824,12 @@
     wireMobileNav();
     if (window.DysobayShop) window.DysobayShop.mount(root);
     marqueeAnimation(root);
+    guardHeroFilm(root);
     heroAnimation(root);
     animateIn(root);
 
     if (ANIM) {
       progressSetter = gsap.quickSetter(progress, 'scaleX');
-      gsap.ticker.remove(tickSkew);
-      gsap.ticker.add(tickSkew);
     }
     onScroll();
 
@@ -752,8 +852,6 @@
     ScrollTrigger.getAll().forEach((t) => t.kill(true));
     marqueeTweens.forEach((t) => t.kill());
     marqueeTweens = [];
-    gsap.ticker.remove(tickSkew);
-    skewSetter = null;
   }
 
   window.addEventListener('scroll', onScroll, { passive: true });

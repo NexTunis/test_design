@@ -21,11 +21,13 @@
     <a class="nav__link" href="journal.html">Journal</a>
     <a class="nav__link" href="about.html">About</a>
     <a class="nav__link" href="contact.html">Contact</a>
-    <a class="nav__link nav__link--mobile" href="search.html" data-open-search>Search</a>
     <a class="nav__link nav__link--mobile" href="wishlist.html">Wishlist</a>
   </nav>
   <div class="nav__utils">
-    <a class="nav__link nav__link--desktop" href="search.html" data-open-search>Search</a>
+    <button class="nav__search" type="button" data-open-search aria-label="Search the collection">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M12.8 12.8 17 17"/></svg>
+      <span>Search</span><kbd>/</kbd>
+    </button>
     <a class="nav__link nav__link--desktop" href="wishlist.html">Wishlist<span class="nav__count" data-wishlist-count></span></a>
     <a class="nav__link" href="cart.html">Bag<span class="nav__count" data-bag-count></span></a>
   </div>
@@ -68,7 +70,7 @@
       <h2 class="h2">More from <span data-related-collection>the collection</span></h2>
       <a class="link-underline" href="collections.html">See all 28</a>
     </div>
-    <div class="grid grid--4" data-render="related" data-skew></div>
+    <div class="grid grid--4" data-render="related"></div>
   </div>
 </section>
 
@@ -90,7 +92,7 @@
           <li><a href="collections.html">Collections</a></li>
           <li><a href="lookbook.html">Lookbook</a></li>
           <li><a href="wishlist.html">Wishlist</a></li>
-          <li><a href="search.html">Search</a></li>
+          <li><button class="footer__linkbtn" type="button" data-open-search>Search</button></li>
           <li><a href="cart.html">Bag</a></li>
           <li><a href="checkout.html">Checkout</a></li>
         </ul>
