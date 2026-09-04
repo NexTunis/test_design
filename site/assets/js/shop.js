@@ -17,6 +17,7 @@
   if (!D || !UI) return;
 
   const { store, toast, cardHTML, animateIn, showNow, esc, ANIM, gsap, $, $$, productById } = UI;
+  const ScrollTrigger = window.ScrollTrigger;
 
   /* ═══════════════════════════  lightbox  ═══════════════════════ */
 
@@ -172,6 +173,7 @@
       root.setAttribute('aria-label', 'Search');
       root.innerHTML = `
         <div class="so__panel">
+          <button class="so__x" type="button" aria-label="Close search">✕</button>
           <div class="so__shell">
             <div class="so__bar">
               <input class="so__input" type="search" placeholder="Search pieces, seasons, materials…" aria-label="Search the collection">
@@ -189,7 +191,13 @@
       results = $('.so__results', root);
       summary = $('.so__summary', root);
       $('.so__close', root).addEventListener('click', close);
-      root.addEventListener('click', (e) => { if (e.target === root) close(); });
+      $('.so__x', root).addEventListener('click', close);
+      /* The panel fills the viewport, so "click outside" cannot mean "hit the
+         root element" — it means anything that is not the search furniture. */
+      root.addEventListener('click', (e) => {
+        if (e.target.closest('.so__bar, .so__suggest, .so__results, .so__x')) return;
+        close();
+      });
       input.addEventListener('input', () => run(input.value));
       $$('[data-so-suggest]', root).forEach((b) => b.addEventListener('click', () => { input.value = b.dataset.soSuggest; run(input.value); input.focus(); }));
     }
@@ -328,8 +336,10 @@
   /* The nav count reacts too, so the change is legible even with the drawer shut. */
   function pulseBagCount() {
     if (!ANIM) return;
-    $$('[data-bag-count]').forEach((n) => gsap.fromTo(n,
-      { scale: 1.9, color: 'var(--clay)' }, { scale: 1, duration: 0.7, ease: 'elastic.out(1,0.45)', clearProps: 'color' }));
+    $$('.navicon__badge[data-bag-count]').forEach((n) => gsap.fromTo(n,
+      { scale: 2.1 }, { scale: 1, duration: 0.75, ease: 'elastic.out(1,0.42)' }));
+    $$('.navicon[data-open-bag] svg').forEach((n) => gsap.fromTo(n,
+      { y: -5 }, { y: 0, duration: 0.7, ease: 'elastic.out(1,0.4)' }));
   }
 
   /* ═══════════════════════════  refine bar  ════════════════════ */
@@ -410,7 +420,12 @@
       const open = toggle.getAttribute('aria-expanded') === 'true';
       toggle.setAttribute('aria-expanded', String(!open));
       panel.classList.toggle('is-open', !open);
-      if (ANIM) gsap.fromTo(panel, { height: open ? panel.scrollHeight : 0 }, { height: open ? 0 : 'auto', duration: 0.45, ease: 'expo.out' });
+      /* The fields animate, the container does not: tweening height to 'auto'
+         left the panel clipped at a stale pixel height, so the selects were cut
+         in half and the product grid rode over them. */
+      if (ANIM && !open) gsap.fromTo($$('.refine__field', panel), { y: -14, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.45, ease: 'expo.out', stagger: 0.05 });
+      if (ANIM) ScrollTrigger.refresh();
     });
   }
 

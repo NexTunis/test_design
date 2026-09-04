@@ -59,9 +59,19 @@
   }
 
   function syncCounts() {
-    const b = store.read('bag').length, w = store.read('wishlist').length;
-    $$('[data-bag-count]').forEach((n) => { n.textContent = b ? '(' + b + ')' : ''; });
-    $$('[data-wishlist-count]').forEach((n) => { n.textContent = w ? '(' + w + ')' : ''; });
+    const counts = { '[data-bag-count]': store.read('bag').length, '[data-wishlist-count]': store.read('wishlist').length };
+    Object.keys(counts).forEach((sel) => {
+      const v = counts[sel];
+      $$(sel).forEach((n) => {
+        /* Badges carry the bare number and disappear at zero; the footer links
+           keep the parenthetical form so "Bag (2)" still reads as a sentence. */
+        const badge = n.classList.contains('navicon__badge');
+        n.textContent = v ? (badge ? String(v) : ' (' + v + ')') : '';
+        n.classList.toggle('is-on', v > 0);
+        const host = n.closest('[aria-label]');
+        if (host && badge) host.setAttribute('aria-label', host.getAttribute('title') + (v ? ' — ' + v + ' item' + (v === 1 ? '' : 's') : ' — empty'));
+      });
+    });
   }
 
   let toastTimer;

@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="icon" href="media/kit-x-mark.jpg">
-<link rel="stylesheet" href="assets/css/site.css?v=9f5f277d">
+<link rel="stylesheet" href="assets/css/site.css?v=f280c476">
 </head>
 <body>
 <header class="nav">
@@ -21,15 +21,22 @@
     <a class="nav__link" href="journal.html">Journal</a>
     <a class="nav__link" href="about.html">About</a>
     <a class="nav__link" href="contact.html">Contact</a>
-    <a class="nav__link nav__link--mobile" href="wishlist.html">Wishlist</a>
   </nav>
   <div class="nav__utils">
-    <button class="nav__search" type="button" data-open-search aria-label="Search the collection">
-      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M12.8 12.8 17 17"/></svg>
-      <span>Search</span><kbd>/</kbd>
+    <button class="navicon" type="button" data-open-search aria-label="Search the collection" title="Search">
+      <span class="navicon__ico"><svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="9.5" cy="9.5" r="6"/><path d="M14 14l5 5"/></svg></span>
+      <span class="navicon__label">Search</span>
     </button>
-    <a class="nav__link nav__link--desktop" href="wishlist.html">Wishlist<span class="nav__count" data-wishlist-count></span></a>
-    <a class="nav__link" href="cart.html">Bag<span class="nav__count" data-bag-count></span></a>
+
+    <a class="navicon" href="wishlist.html" aria-label="Wishlist" title="Wishlist">
+      <span class="navicon__ico"><svg viewBox="0 0 22 22" aria-hidden="true"><path d="M11 18.5S3.5 13.8 3.5 8.6A4.1 4.1 0 0 1 11 6.3a4.1 4.1 0 0 1 7.5 2.3c0 5.2-7.5 9.9-7.5 9.9Z"/></svg><span class="navicon__badge" data-wishlist-count aria-hidden="true"></span></span>
+      <span class="navicon__label">Wishlist</span>
+    </a>
+
+    <a class="navicon" href="cart.html" data-open-bag aria-label="Bag" title="Bag">
+      <span class="navicon__ico"><svg viewBox="0 0 22 22" aria-hidden="true"><path d="M4.5 7h13l-1 11.5h-11L4.5 7Z"/><path d="M8 7V5.6a3 3 0 0 1 6 0V7"/></svg><span class="navicon__badge" data-bag-count aria-hidden="true"></span></span>
+      <span class="navicon__label">Bag</span>
+    </a>
   </div>
 </header>
 <div data-barba="wrapper">
@@ -131,8 +138,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@barba/core@2.9.7/dist/barba.umd.js"></script>
-<script src="assets/js/data.js?v=9f5f277d"></script>
-<script src="assets/js/site.js?v=9f5f277d"></script>
-<script src="assets/js/shop.js?v=9f5f277d"></script>
+<script src="assets/js/data.js?v=f280c476"></script>
+<script src="assets/js/site.js?v=f280c476"></script>
+<script src="assets/js/shop.js?v=f280c476"></script>
 </body>
 </html>
