@@ -319,6 +319,31 @@
         </figure>`).join('');
     },
 
+    /* Each season as a row you can act on: how many pieces it produced, how
+       many are left, and a way into both the lookbook and the shop. */
+    timeline(node) {
+      node.innerHTML = D.COLLECTIONS.map((c) => {
+        const pieces = D.PRODUCTS.filter((p) => p.collection === c.id);
+        const left = pieces.filter((p) => p.status !== 'sold').length;
+        const shot = (D.LOOKBOOK.find((l) => l.collection === c.id) || {}).src || pieces[0].images[0];
+        return `<article class="season-row" data-block>
+          <a class="media media--3x4 season-row__shot" href="lookbook.html" style="--tone:${D.toneOf(shot)}">
+            <span class="media__inner"><img ${imgAttrs(shot, c.name, 'card')}></span>
+          </a>
+          <div class="season-row__body">
+            <p class="season__tag">${esc(c.season)} · ${esc(c.place)}</p>
+            <h3 class="h3">${esc(c.name)}</h3>
+            <p class="lede" style="margin-top:var(--space-2)">${esc(c.note)}</p>
+            <p class="season-row__count">${pieces.length} piece${pieces.length === 1 ? '' : 's'} made · ${left} still available</p>
+            <p class="season-row__acts">
+              <a class="link-underline" href="collections.html">Shop the season</a>
+              <a class="link-underline" href="lookbook.html">See the looks</a>
+            </p>
+          </div>
+        </article>`;
+      }).join('');
+    },
+
     socials(node) {
       node.innerHTML = D.SOCIALS.map((s) => `<a class="sociallink" href="${s.href}"${s.href.startsWith('http') ? ' target="_blank" rel="noopener noreferrer"' : ''}>
           <span class="sociallink__net">${esc(s.net)}</span>
@@ -447,8 +472,8 @@
             <p class="lede" style="max-width:46ch">${esc(p.note)}</p>
 
             <div class="pdp__actions">
-              <button type="button" class="btn btn--lg btn--block" data-magnetic data-add-bag="${p.id}"${p.status === 'sold' ? ' disabled' : ''}>${p.status === 'sold' ? 'Sold out' : 'Add to bag — ' + D.AED(p.price)}</button>
-              <button type="button" class="btn btn--ghost btn--lg btn--block" data-toggle-wishlist="${p.id}">${inWish ? 'Saved to wishlist' : 'Add to wishlist'}</button>
+              <button type="button" class="btn btn--lg btn--block" data-add-bag="${p.id}"${p.status === 'sold' ? ' disabled' : ''}>${p.status === 'sold' ? 'Sold out' : 'Add to bag — ' + D.AED(p.price)}</button>
+              <button type="button" class="pdp__wish${inWish ? ' is-on' : ''}" data-toggle-wishlist="${p.id}">${inWish ? 'Saved to wishlist' : 'Add to wishlist'}</button>
             </div>
 
             <ul class="pdp__assure">
@@ -488,6 +513,23 @@
 
       wireAccordion(node);
 
+      /* A buy bar that arrives once the real button has scrolled away. */
+      if (ANIM && p.status !== 'sold') {
+        let bar = $('.buybar');
+        if (!bar) { bar = document.createElement('div'); bar.className = 'buybar'; document.body.appendChild(bar); }
+        bar.innerHTML = `<span class="buybar__meta"><span class="buybar__name">${esc(p.name)}</span>
+            <span class="buybar__price">${D.AED(p.price)} · ${esc(p.size)}</span></span>
+          <button type="button" class="btn" data-add-bag="${p.id}">Add to bag</button>`;
+        const anchor = $('.pdp__actions', node);
+        ScrollTrigger.create({
+          trigger: anchor, start: 'bottom top+=8',
+          onToggle: (self) => {
+            bar.classList.toggle('is-on', self.isActive);
+            gsap.to(bar, { yPercent: self.isActive ? 0 : 110, duration: 0.4, ease: 'expo.out' });
+          },
+        });
+      }
+
       const rel = $('[data-render="related"]');
       if (rel) {
         const same = D.PRODUCTS.filter((x) => x.id !== p.id && x.collection === p.collection);
@@ -503,23 +545,64 @@
     bag(node) {
       const items = store.items('bag');
       if (!items.length) {
-        node.innerHTML = `<div class="empty stack"><p class="lede">Your bag is empty.</p><p><a class="btn" href="collections.html">See what is still available</a></p></div>`;
+        node.innerHTML = `<div class="empty stack">
+          <p class="h2">Your bag is empty.</p>
+          <p class="lede">Thirty-one pieces exist. Each of them once.</p>
+          <p><a class="btn btn--lg" href="collections.html">See what is still available</a></p>
+        </div>`;
         return;
       }
-      const total = items.reduce((s, p) => s + p.price, 0);
-      node.innerHTML = items.map((p) => `<div class="bagline" data-reveal>
-          <a class="media media--3x4" href="product.html?id=${encodeURIComponent(p.id)}"${tone(p.images[0])}><span class="media__inner"><img ${imgAttrs(p.images[0], p.name, 'card')}></span></a>
-          <div>
-            <a class="h4" href="product.html?id=${encodeURIComponent(p.id)}">${esc(p.name)}</a>
-            <p class="small" style="margin-top:var(--space-2)">Size ${esc(p.size)} · No. ${esc(p.piece)} · One piece only</p>
-            <p class="small">${esc(p.atelier)} · ${esc(p.hours)} h of work</p>
-            <p style="margin-top:var(--space-3)">${D.AED(p.price)}</p>
+      const sub = items.reduce((s, p) => s + p.price, 0);
+      const duties = Math.round(sub * 0.05);
+
+      node.innerHTML = `
+        <div class="bagwrap">
+          <div class="bagwrap__lines">
+            <p class="eyebrow">${items.length} piece${items.length === 1 ? '' : 's'} · each the only one</p>
+            ${items.map((p) => `<article class="bagline">
+                <a class="media media--3x4" href="product.html?id=${encodeURIComponent(p.id)}" style="--tone:${D.toneOf(p.images[0])}">
+                  <span class="media__inner"><img ${imgAttrs(p.images[0], p.name, 'card')}></span>
+                </a>
+                <div class="bagline__body">
+                  <a class="h3" href="product.html?id=${encodeURIComponent(p.id)}">${esc(p.name)}</a>
+                  <p class="card__sub">${esc(D.collectionOf(p.collection).name)} · ${esc(D.collectionOf(p.collection).season)}</p>
+                  <dl class="bagline__spec">
+                    <div><dt>Size</dt><dd>${esc(p.size)}</dd></div>
+                    <div><dt>Piece</dt><dd>No. ${esc(p.piece)}</dd></div>
+                    <div><dt>Atelier</dt><dd>${esc(p.atelier)}</dd></div>
+                    <div><dt>Work</dt><dd>${esc(p.hours)} hours</dd></div>
+                  </dl>
+                  <div class="bagline__acts">
+                    <button type="button" class="link-underline" data-remove-bag="${p.id}">Remove</button>
+                    <button type="button" class="link-underline" data-toggle-wishlist="${p.id}">Move to wishlist</button>
+                  </div>
+                </div>
+                <p class="bagline__price">${D.AED(p.price)}</p>
+              </article>`).join('')}
+            <p class="small bagwrap__note">Nothing here is reserved. Every piece is the only one, and the bag does not hold it.</p>
           </div>
-          <button type="button" class="bagline__remove" data-remove-bag="${p.id}" aria-label="Remove ${esc(p.name)} from bag">×</button>
-        </div>`).join('') +
-        `<div class="bagtotal"><span>Subtotal</span><span>${D.AED(total)}</span></div>
-         <p class="small" style="margin-bottom:var(--space-5)">Worldwide express shipping is included. Duties and taxes are settled at checkout. Every piece here is the only one — leaving it in the bag does not hold it.</p>
-         <a class="btn btn--lg btn--block" data-magnetic href="checkout.html">Checkout</a>`;
+
+          <aside class="bagsum">
+            <h2 class="h4">Summary</h2>
+            <div class="sumrow"><span>${items.length} piece${items.length === 1 ? '' : 's'}</span><span>${D.AED(sub)}</span></div>
+            <div class="sumrow"><span>Express shipping</span><span>Included</span></div>
+            <div class="sumrow"><span>Duties &amp; taxes (est.)</span><span>${D.AED(duties)}</span></div>
+            <div class="sumrow sumrow--total"><span>Total</span><span>${D.AED(sub + duties)}</span></div>
+            <a class="btn btn--lg btn--block" href="checkout.html">Checkout</a>
+            <a class="btn btn--ghost btn--block" href="collections.html">Keep looking</a>
+            <ul class="pdp__assure">
+              <li>One alteration by the atelier that made it</li>
+              <li>Numbered authenticity card</li>
+              <li>Lifetime repair, labour free</li>
+            </ul>
+          </aside>
+        </div>`;
+
+      const also = $('[data-render="also"]');
+      if (also) {
+        const ids = items.map((p) => p.id);
+        also.innerHTML = D.PRODUCTS.filter((p) => !ids.includes(p.id) && p.status !== 'sold').slice(0, 4).map(cardHTML).join('');
+      }
     },
 
     wishlist(node) {
@@ -916,7 +999,9 @@
       const id = add.dataset.addBag, p = productById(id);
       if (!store.has('bag', id)) store.toggle('bag', id);
       if (ANIM) gsap.fromTo(add, { scale: 0.94 }, { scale: 1, duration: 0.5, ease: 'elastic.out(1,0.5)' });
-      toast(p ? p.name + ' added to bag' : 'Added to bag');
+      /* shop.js opens the mini bag on this same click, which is the feedback —
+         a toast at the foot of a long product page is feedback nobody sees. */
+      if (!window.DysobayShop) toast(p ? p.name + ' added to bag' : 'Added to bag');
       return;
     }
     const rm = e.target.closest('[data-remove-bag]');
@@ -932,10 +1017,16 @@
       const id = wish.dataset.toggleWishlist;
       const added = store.toggle('wishlist', id);
       if (wish.textContent.trim() !== '×') wish.textContent = added ? 'Saved to wishlist' : 'Add to wishlist';
+      wish.classList.toggle('is-on', added);
       const h = $('[data-render="wishlist"]');
       if (h) { renderers.wishlist(h); animateIn(h); }
       toast(added ? 'Saved to wishlist' : 'Removed from wishlist');
     }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('[data-back-to-top]')) return;
+    window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
   });
 
   document.addEventListener('submit', (e) => {

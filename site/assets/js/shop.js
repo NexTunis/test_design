@@ -247,6 +247,91 @@
     return { show, close, isOpen: () => open };
   })();
 
+
+  /* ═══════════════════════════  mini bag  ══════════════════════ */
+  /* A toast at the bottom of a long product page is feedback nobody sees.
+     Adding to the bag now opens the bag itself, showing what went in, what it
+     costs, and the two things you would want to do next. */
+  const minibag = (() => {
+    let root, open = false;
+
+    function build() {
+      root = document.createElement('aside');
+      root.className = 'mb';
+      root.setAttribute('role', 'dialog');
+      root.setAttribute('aria-modal', 'true');
+      root.setAttribute('aria-label', 'Your bag');
+      root.innerHTML = '<div class="mb__scrim" data-mb-close></div><div class="mb__panel"></div>';
+      document.body.appendChild(root);
+      root.addEventListener('click', (e) => { if (e.target.closest('[data-mb-close]')) close(); });
+    }
+
+    function render(justAdded) {
+      const items = store.items('bag');
+      const total = items.reduce((s, p) => s + p.price, 0);
+      $('.mb__panel', root).innerHTML = `
+        <header class="mb__head">
+          <p class="eyebrow">${justAdded ? 'Added to your bag' : 'Your bag'}</p>
+          <button type="button" class="mb__close" data-mb-close aria-label="Close bag">✕</button>
+        </header>
+        ${items.length ? `
+        <div class="mb__lines">
+          ${items.map((p) => `<div class="mb__line${justAdded && p.id === justAdded ? ' is-new' : ''}">
+              <a class="media media--3x4" href="product.html?id=${encodeURIComponent(p.id)}" style="--tone:${D.toneOf(p.images[0])}">
+                <span class="media__inner"><img src="${D.MEDIA + 'sm/' + p.images[0].split('/').pop().replace(/\.(jpg|png)$/i, '.webp')}" alt="${esc(p.name)}"></span>
+              </a>
+              <div>
+                <a class="h4" href="product.html?id=${encodeURIComponent(p.id)}">${esc(p.name)}</a>
+                <p class="small">${esc(p.size)} · No. ${esc(p.piece)}</p>
+                <p class="small">${D.AED(p.price)}</p>
+              </div>
+              <button type="button" class="mb__x" data-remove-bag="${p.id}" aria-label="Remove ${esc(p.name)}">✕</button>
+            </div>`).join('')}
+        </div>
+        <footer class="mb__foot">
+          <div class="sumrow sumrow--total"><span>Subtotal</span><span>${D.AED(total)}</span></div>
+          <p class="small">Worldwide express shipping included. Duties settled at checkout.</p>
+          <a class="btn btn--lg btn--block" href="checkout.html">Checkout</a>
+          <a class="btn btn--ghost btn--block" href="cart.html">View the full bag</a>
+          <button type="button" class="link-underline mb__keep" data-mb-close>Keep looking</button>
+        </footer>` : `
+        <div class="mb__empty">
+          <p class="lede">Your bag is empty.</p>
+          <a class="btn" href="collections.html">See what is available</a>
+        </div>`}`;
+    }
+
+    function show(justAdded) {
+      if (!root) build();
+      render(justAdded);
+      root.classList.add('is-open');
+      open = true;
+      if (!ANIM) return;
+      gsap.fromTo($('.mb__scrim', root), { opacity: 0 }, { opacity: 1, duration: 0.3 });
+      gsap.fromTo($('.mb__panel', root), { xPercent: 100 }, { xPercent: 0, duration: 0.55, ease: 'expo.out' });
+      gsap.fromTo($$('.mb__line, .mb__foot > *', root), { x: 30, opacity: 0 },
+        { x: 0, opacity: 1, duration: 0.5, ease: 'expo.out', stagger: 0.05, delay: 0.12 });
+    }
+
+    function close() {
+      if (!open) return;
+      open = false;
+      const done = () => root.classList.remove('is-open');
+      if (ANIM) gsap.to($('.mb__panel', root), { xPercent: 100, duration: 0.35, ease: 'power3.in', onComplete: done });
+      else done();
+    }
+
+    document.addEventListener('keydown', (e) => { if (open && e.key === 'Escape') close(); });
+    return { show, close, refresh: () => open && render(null), isOpen: () => open };
+  })();
+
+  /* The nav count reacts too, so the change is legible even with the drawer shut. */
+  function pulseBagCount() {
+    if (!ANIM) return;
+    $$('[data-bag-count]').forEach((n) => gsap.fromTo(n,
+      { scale: 1.9, color: 'var(--clay)' }, { scale: 1, duration: 0.7, ease: 'elastic.out(1,0.45)', clearProps: 'color' }));
+  }
+
   /* ═══════════════════════════  refine bar  ════════════════════ */
 
   function mountRefine(node) {
@@ -355,194 +440,333 @@
     node.dataset.wired = '1';
 
     const items = store.items('bag');
-    const sub = items.reduce((s, p) => s + p.price, 0);
-    const shipping = 0;
-    const duties = Math.round(sub * 0.05);
-    const total = sub + shipping + duties;
-
     if (!items.length) {
       node.innerHTML = `<div class="empty stack">
-        <p class="lede">There is nothing to check out.</p>
-        <p><a class="btn" href="collections.html">See what is still available</a></p></div>`;
+        <p class="h2">There is nothing to check out.</p>
+        <p><a class="btn btn--lg" href="collections.html">See what is still available</a></p></div>`;
       return;
     }
 
-    node.innerHTML = `
-      <ol class="steps" aria-label="Checkout progress">
-        ${['Bag', 'Details', 'Delivery', 'Payment'].map((s, i) => `<li class="step${i === 0 ? ' is-active' : ''}" data-step-dot="${i}"><span class="step__n">${i + 1}</span><span class="step__l">${s}</span></li>`).join('')}
-      </ol>
+    const SHIPPING = [
+      { id: 'express', name: 'Express', note: '3–5 working days, tracked from the Dubai atelier', cost: 0, label: 'Included' },
+      { id: 'named', name: 'Named-day delivery', note: 'Choose the day; we hold the piece in the studio until then', cost: 120, label: 'AED 120' },
+      { id: 'collect', name: 'Studio collection', note: 'Collect in person in Al Quoz, with the atelier present', cost: 0, label: 'Free' },
+    ];
+    const PROMOS = { 'NOTMASS': 0.1, 'MILAN26': 0.15 };
 
-      <div class="checkout">
-        <div class="checkout__main">
-          <section class="pane is-active" data-pane="0">
-            <h2 class="h2" data-split>Your bag</h2>
-            <div class="checkout__lines">
-              ${items.map((p) => `<div class="coline">
-                  <figure class="media media--3x4"><span class="media__inner"><img src="${p.images[0]}" alt="${esc(p.name)}"></span></figure>
-                  <div>
-                    <p class="h4">${esc(p.name)}</p>
-                    <p class="small">Size ${esc(p.size)} · No. ${esc(p.piece)}</p>
-                    <p class="small">${esc(p.atelier)} · ${esc(p.hours)} h of work</p>
-                  </div>
-                  <p>${D.AED(p.price)}</p>
-                </div>`).join('')}
-            </div>
-            <div class="checkout__nav"><button type="button" class="btn btn--lg" data-magnetic data-step-next>Continue to details</button></div>
-          </section>
+    const state = { step: 0, ship: 'express', gift: false, promo: null, discount: 0 };
+    const sub = items.reduce((s, p) => s + p.price, 0);
 
-          <section class="pane" data-pane="1" hidden>
-            <h2 class="h2">Your details</h2>
-            <div class="formgrid">
-              <label class="field"><span class="field__label">First name</span><input class="input" autocomplete="given-name" value="Haifa"></label>
-              <label class="field"><span class="field__label">Last name</span><input class="input" autocomplete="family-name" value="Ghodhbane"></label>
-              <label class="field field--wide"><span class="field__label">Email</span><input class="input" type="email" autocomplete="email" value="you@example.com"></label>
-              <label class="field field--wide"><span class="field__label">Phone</span><input class="input" type="tel" autocomplete="tel" value="+971 50 000 0000"></label>
-            </div>
-            <div class="checkout__nav">
-              <button type="button" class="btn btn--ghost btn--lg" data-step-prev>Back</button>
-              <button type="button" class="btn btn--lg" data-magnetic data-step-next>Continue to delivery</button>
-            </div>
-          </section>
+    const shipCost = () => (SHIPPING.find((s) => s.id === state.ship) || SHIPPING[0]).cost;
+    const giftCost = () => (state.gift ? 90 : 0);
+    const discount = () => Math.round(sub * state.discount);
+    const duties = () => Math.round((sub - discount()) * 0.05);
+    const total = () => sub - discount() + shipCost() + giftCost() + duties();
 
-          <section class="pane" data-pane="2" hidden>
-            <h2 class="h2">Delivery</h2>
-            <div class="formgrid">
-              <label class="field field--wide"><span class="field__label">Address</span><input class="input" autocomplete="street-address" value="Al Quoz 1, Street 8"></label>
-              <label class="field"><span class="field__label">City</span><input class="input" autocomplete="address-level2" value="Dubai"></label>
-              <label class="field"><span class="field__label">Country</span><input class="input" autocomplete="country-name" value="United Arab Emirates"></label>
-            </div>
-            <div class="ship">
-              ${[['Express — included', '3–5 working days, tracked from the Dubai atelier', 'Included', true],
-                 ['Named-day delivery', 'Choose the day; we hold the piece until then', 'AED 120', false],
-                 ['Studio collection', 'Collect in person, with the atelier present', 'Free', false]]
-                .map(([t, s, p, on], i) => `<label class="ship__opt${on ? ' is-on' : ''}">
-                    <input type="radio" name="ship" ${on ? 'checked' : ''}>
-                    <span><strong>${t}</strong><span class="small">${s}</span></span>
-                    <span class="ship__price">${p}</span>
-                  </label>`).join('')}
-            </div>
-            <div class="checkout__nav">
-              <button type="button" class="btn btn--ghost btn--lg" data-step-prev>Back</button>
-              <button type="button" class="btn btn--lg" data-magnetic data-step-next>Continue to payment</button>
-            </div>
-          </section>
+    const STEPS = ['Bag', 'Details', 'Delivery', 'Payment', 'Review'];
 
-          <section class="pane" data-pane="3" hidden>
-            <h2 class="h2">Payment</h2>
-            <p class="small" style="margin-bottom:var(--space-5)">This is a prototype. Nothing is charged and nothing is transmitted — type any numbers you like.</p>
-
-            <div class="paycard" data-paycard>
-              <div class="paycard__brand" data-card-brand>Card</div>
-              <div class="paycard__num" data-card-num>•••• •••• •••• ••••</div>
-              <div class="paycard__row">
-                <span><small>Holder</small><b data-card-name>Your name</b></span>
-                <span><small>Expires</small><b data-card-exp>••/••</b></span>
-              </div>
-            </div>
-
-            <div class="formgrid" style="margin-top:var(--space-6)">
-              <label class="field field--wide"><span class="field__label">Card number</span>
-                <input class="input" inputmode="numeric" autocomplete="cc-number" placeholder="4242 4242 4242 4242" data-cc-number></label>
-              <label class="field field--wide"><span class="field__label">Name on card</span>
-                <input class="input" autocomplete="cc-name" placeholder="As printed on the card" data-cc-name></label>
-              <label class="field"><span class="field__label">Expiry</span>
-                <input class="input" inputmode="numeric" autocomplete="cc-exp" placeholder="MM/YY" maxlength="5" data-cc-exp></label>
-              <label class="field"><span class="field__label">Security code</span>
-                <input class="input" inputmode="numeric" autocomplete="cc-csc" placeholder="123" maxlength="4" data-cc-cvc></label>
-            </div>
-            <p class="small pay__error" data-pay-error hidden>Check the card number — that one does not pass a Luhn check.</p>
-            <div class="checkout__nav">
-              <button type="button" class="btn btn--ghost btn--lg" data-step-prev>Back</button>
-              <button type="button" class="btn btn--lg btn--accent" data-magnetic data-pay-submit>Pay ${D.AED(total)}</button>
-            </div>
-          </section>
+    function summaryHTML() {
+      return `
+        <h2 class="h4">Order summary</h2>
+        <div class="cosum__items">
+          ${items.map((p) => `<div class="cosum__item">
+              <span class="media media--3x4" style="--tone:${D.toneOf(p.images[0])}">
+                <span class="media__inner"><img src="${D.MEDIA + 'sm/' + p.images[0].split('/').pop().replace(/\.(jpg|png)$/i, '.webp')}" alt="${esc(p.name)}"></span>
+              </span>
+              <span><b>${esc(p.name)}</b><span class="small">${esc(p.size)} · No. ${esc(p.piece)}</span></span>
+              <span class="cosum__price">${D.AED(p.price)}</span>
+            </div>`).join('')}
         </div>
+        <div class="sumrow"><span>${items.length} piece${items.length === 1 ? '' : 's'}</span><span>${D.AED(sub)}</span></div>
+        ${state.discount ? `<div class="sumrow sumrow--credit"><span>${esc(state.promo)}</span><span>−${D.AED(discount())}</span></div>` : ''}
+        <div class="sumrow"><span>${esc((SHIPPING.find((s) => s.id === state.ship) || SHIPPING[0]).name)}</span><span>${shipCost() ? D.AED(shipCost()) : 'Included'}</span></div>
+        ${state.gift ? `<div class="sumrow"><span>Gift wrap &amp; note</span><span>${D.AED(90)}</span></div>` : ''}
+        <div class="sumrow"><span>Duties &amp; taxes</span><span>${D.AED(duties())}</span></div>
+        <div class="sumrow sumrow--total"><span>Total</span><span data-total>${D.AED(total())}</span></div>
+        <ul class="pdp__assure">
+          <li>One alteration by the atelier that made it</li>
+          <li>Numbered authenticity card</li>
+          <li>Lifetime repair, labour free</li>
+        </ul>`;
+    }
 
-        <aside class="checkout__summary" data-reveal>
-          <h2 class="h4">Order summary</h2>
-          <div class="sumrow"><span>${items.length} piece${items.length === 1 ? '' : 's'}</span><span>${D.AED(sub)}</span></div>
-          <div class="sumrow"><span>Express shipping</span><span>Included</span></div>
-          <div class="sumrow"><span>Duties &amp; taxes</span><span>${D.AED(duties)}</span></div>
-          <div class="sumrow sumrow--total"><span>Total</span><span>${D.AED(total)}</span></div>
-          <ul class="pdp__assure">
-            <li>One alteration by the atelier that made it</li>
-            <li>Numbered authenticity card</li>
-            <li>Lifetime repair, labour free</li>
-          </ul>
-        </aside>
-      </div>`;
+    function paint() {
+      node.innerHTML = `
+        <ol class="steps" aria-label="Checkout progress">
+          ${STEPS.map((s, i) => `<li class="step${i <= state.step ? ' is-active' : ''}" data-step-dot="${i}">
+              <span class="step__n">${i < state.step ? '✓' : i + 1}</span><span class="step__l">${s}</span></li>`).join('')}
+        </ol>
 
-    /* ── step machine ── */
-    let step = 0;
-    const panes = $$('.pane', node);
-    const dots = $$('[data-step-dot]', node);
+        <div class="checkout">
+          <div class="checkout__main">
+
+            <section class="pane" data-pane="0"${state.step === 0 ? '' : ' hidden'}>
+              <h2 class="h2">Your bag</h2>
+              <div class="checkout__lines">
+                ${items.map((p) => `<div class="coline">
+                    <span class="media media--3x4" style="--tone:${D.toneOf(p.images[0])}">
+                      <span class="media__inner"><img src="${D.MEDIA + 'sm/' + p.images[0].split('/').pop().replace(/\.(jpg|png)$/i, '.webp')}" alt="${esc(p.name)}"></span>
+                    </span>
+                    <div>
+                      <p class="h4">${esc(p.name)}</p>
+                      <p class="small">${esc(p.size)} · No. ${esc(p.piece)}</p>
+                      <p class="small">${esc(p.atelier)} · ${esc(p.hours)} h of work</p>
+                    </div>
+                    <p>${D.AED(p.price)}</p>
+                  </div>`).join('')}
+              </div>
+              <div class="promo">
+                <label class="field">
+                  <span class="field__label">Promotion code</span>
+                  <span class="footer__inputrow">
+                    <input class="input" data-promo placeholder="NOTMASS" value="${state.promo ? esc(state.promo) : ''}">
+                    <button type="button" class="btn btn--ghost" data-promo-apply>Apply</button>
+                  </span>
+                </label>
+                <p class="small promo__msg" data-promo-msg>${state.discount ? `${esc(state.promo)} applied — ${Math.round(state.discount * 100)}% off` : 'Try NOTMASS or MILAN26.'}</p>
+              </div>
+              <div class="checkout__nav"><button type="button" class="btn btn--lg" data-step-next>Continue to details</button></div>
+            </section>
+
+            <section class="pane" data-pane="1"${state.step === 1 ? '' : ' hidden'}>
+              <h2 class="h2">Your details</h2>
+              <div class="express">
+                <p class="small">Fastest way through — nothing is charged.</p>
+                <div class="express__row">
+                  <button type="button" class="express__btn" data-express>Pay</button>
+                  <button type="button" class="express__btn" data-express>G Pay</button>
+                  <button type="button" class="express__btn" data-express>PayPal</button>
+                </div>
+                <p class="express__or"><span>or continue with card</span></p>
+              </div>
+              <div class="formgrid">
+                <label class="field"><span class="field__label">First name</span><input class="input" autocomplete="given-name" value="Haifa"></label>
+                <label class="field"><span class="field__label">Last name</span><input class="input" autocomplete="family-name" value="Ghodhbane"></label>
+                <label class="field field--wide"><span class="field__label">Email</span><input class="input" type="email" autocomplete="email" value="you@example.com"></label>
+                <label class="field field--wide"><span class="field__label">Phone</span><input class="input" type="tel" autocomplete="tel" value="+971 50 000 0000"></label>
+              </div>
+              <div class="checkout__nav">
+                <button type="button" class="btn btn--ghost btn--lg" data-step-prev>Back</button>
+                <button type="button" class="btn btn--lg" data-step-next>Continue to delivery</button>
+              </div>
+            </section>
+
+            <section class="pane" data-pane="2"${state.step === 2 ? '' : ' hidden'}>
+              <h2 class="h2">Delivery</h2>
+              <div class="formgrid">
+                <label class="field field--wide"><span class="field__label">Address</span><input class="input" autocomplete="street-address" value="Al Quoz 1, Street 8"></label>
+                <label class="field"><span class="field__label">City</span><input class="input" autocomplete="address-level2" value="Dubai"></label>
+                <label class="field"><span class="field__label">Country</span><input class="input" autocomplete="country-name" value="United Arab Emirates"></label>
+              </div>
+              <div class="ship">
+                ${SHIPPING.map((s) => `<label class="ship__opt${state.ship === s.id ? ' is-on' : ''}">
+                    <input type="radio" name="ship" value="${s.id}" data-ship ${state.ship === s.id ? 'checked' : ''}>
+                    <span><strong>${esc(s.name)}</strong><span class="small">${esc(s.note)}</span></span>
+                    <span class="ship__price">${esc(s.label)}</span>
+                  </label>`).join('')}
+              </div>
+              <label class="gift">
+                <input type="checkbox" data-gift ${state.gift ? 'checked' : ''}>
+                <span><strong>Gift wrap and a handwritten note — AED 90</strong>
+                  <span class="small">Boxed in the striped case, sealed with the painted mark, price removed from the card.</span></span>
+              </label>
+              <label class="field gift__note"${state.gift ? '' : ' hidden'}>
+                <span class="field__label">Note to include</span>
+                <textarea class="textarea" data-gift-note placeholder="Written by hand onto the card, exactly as you type it."></textarea>
+              </label>
+              <div class="checkout__nav">
+                <button type="button" class="btn btn--ghost btn--lg" data-step-prev>Back</button>
+                <button type="button" class="btn btn--lg" data-step-next>Continue to payment</button>
+              </div>
+            </section>
+
+            <section class="pane" data-pane="3"${state.step === 3 ? '' : ' hidden'}>
+              <h2 class="h2">Payment</h2>
+              <p class="small" style="margin-bottom:var(--space-5)">A prototype. Nothing is charged and nothing leaves this page — type any numbers you like.</p>
+              <div class="paycard" data-paycard>
+                <div class="paycard__brand" data-card-brand>Card</div>
+                <div class="paycard__num" data-card-num>•••• •••• •••• ••••</div>
+                <div class="paycard__row">
+                  <span><small>Holder</small><b data-card-name>Your name</b></span>
+                  <span><small>Expires</small><b data-card-exp>••/••</b></span>
+                </div>
+              </div>
+              <div class="formgrid" style="margin-top:var(--space-6)">
+                <label class="field field--wide"><span class="field__label">Card number</span>
+                  <input class="input" inputmode="numeric" autocomplete="cc-number" placeholder="4242 4242 4242 4242" data-cc-number></label>
+                <label class="field field--wide"><span class="field__label">Name on card</span>
+                  <input class="input" autocomplete="cc-name" placeholder="As printed on the card" data-cc-name></label>
+                <label class="field"><span class="field__label">Expiry</span>
+                  <input class="input" inputmode="numeric" autocomplete="cc-exp" placeholder="MM/YY" maxlength="5" data-cc-exp></label>
+                <label class="field"><span class="field__label">Security code</span>
+                  <input class="input" inputmode="numeric" autocomplete="cc-csc" placeholder="123" maxlength="4" data-cc-cvc></label>
+              </div>
+              <p class="small pay__error" data-pay-error hidden>Check the card number — that one does not pass a Luhn check.</p>
+              <div class="checkout__nav">
+                <button type="button" class="btn btn--ghost btn--lg" data-step-prev>Back</button>
+                <button type="button" class="btn btn--lg" data-step-next>Review the order</button>
+              </div>
+            </section>
+
+            <section class="pane" data-pane="4"${state.step === 4 ? '' : ' hidden'}>
+              <h2 class="h2">Review</h2>
+              <div class="review">
+                <div class="review__row"><span>Delivering to</span><span>Haifa Ghodhbane · Al Quoz 1, Street 8, Dubai</span></div>
+                <div class="review__row"><span>Method</span><span data-review-ship>${esc((SHIPPING.find((s) => s.id === state.ship) || SHIPPING[0]).name)}</span></div>
+                <div class="review__row"><span>Gift</span><span data-review-gift>${state.gift ? 'Wrapped, with a handwritten note' : 'No'}</span></div>
+                <div class="review__row"><span>Paying with</span><span data-review-card>Card ending ••••</span></div>
+                <div class="review__row"><span>Pieces</span><span>${items.map((p) => esc(p.name)).join(', ')}</span></div>
+              </div>
+              <p class="small" style="margin-top:var(--space-5)">Every piece here is the only one. Once this order is placed the design is retired and the page becomes a record.</p>
+              <div class="checkout__nav">
+                <button type="button" class="btn btn--ghost btn--lg" data-step-prev>Back</button>
+                <button type="button" class="btn btn--lg btn--accent" data-pay-submit>Place order — <span data-total-btn>${D.AED(total())}</span></button>
+              </div>
+            </section>
+          </div>
+
+          <aside class="checkout__summary cosum" data-summary>${summaryHTML()}</aside>
+        </div>`;
+      wireCard();
+    }
+
+    function repaintSummary() {
+      const box = $('[data-summary]', node);
+      if (box) box.innerHTML = summaryHTML();
+      const btn = $('[data-total-btn]', node);
+      if (btn) btn.textContent = D.AED(total());
+    }
 
     function go(next) {
-      if (next === step || next < 0 || next >= panes.length) return;
-      const dir = next > step ? 1 : -1;
-      const from = panes[step], to = panes[next];
-      step = next;
-      dots.forEach((d, i) => d.classList.toggle('is-active', i <= step));
-
+      if (next === state.step || next < 0 || next >= STEPS.length) return;
+      const dir = next > state.step ? 1 : -1;
+      const from = $(`.pane[data-pane="${state.step}"]`, node);
+      const to = $(`.pane[data-pane="${next}"]`, node);
+      state.step = next;
+      $$('[data-step-dot]', node).forEach((d, i) => {
+        d.classList.toggle('is-active', i <= state.step);
+        $('.step__n', d).textContent = i < state.step ? '✓' : i + 1;
+      });
       const reveal = () => {
-        from.hidden = true; from.classList.remove('is-active');
-        to.hidden = false; to.classList.add('is-active');
+        from.hidden = true;
+        to.hidden = false;
         if (!ANIM) return;
-        gsap.fromTo(to, { x: 60 * dir, opacity: 0 }, { x: 0, opacity: 1, duration: 0.55, ease: 'expo.out' });
-        gsap.fromTo($$(':scope > *', to), { y: 30, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.5, ease: 'expo.out', stagger: 0.06, delay: 0.08 });
+        gsap.fromTo(to, { x: 50 * dir, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, ease: 'expo.out' });
+        gsap.fromTo($$(':scope > *', to), { y: 26, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.45, ease: 'expo.out', stagger: 0.05, delay: 0.06 });
       };
-      if (ANIM) gsap.to(from, { x: -60 * dir, opacity: 0, duration: 0.3, ease: 'power2.in', onComplete: reveal });
+      if (ANIM) gsap.to(from, { x: -50 * dir, opacity: 0, duration: 0.26, ease: 'power2.in', onComplete: reveal });
       else reveal();
       node.scrollIntoView({ behavior: ANIM ? 'smooth' : 'auto', block: 'start' });
     }
 
+    function wireCard() {
+      const num = $('[data-cc-number]', node);
+      if (!num) return;
+      const nameI = $('[data-cc-name]', node), expI = $('[data-cc-exp]', node);
+      const brandOut = $('[data-card-brand]', node), numOut = $('[data-card-num]', node),
+            nameOut = $('[data-card-name]', node), expOut = $('[data-card-exp]', node);
+      num.addEventListener('input', () => {
+        const digits = num.value.replace(/\D/g, '').slice(0, 19);
+        num.value = digits.replace(/(.{4})/g, '$1 ').trim();
+        numOut.textContent = (num.value + ' •••• •••• •••• ••••').slice(0, 19);
+        const brand = CARD_BRANDS.find((b) => b.re.test(digits));
+        brandOut.textContent = brand ? brand.name : 'Card';
+        $('[data-paycard]', node).classList.toggle('is-known', !!brand);
+      });
+      nameI.addEventListener('input', () => { nameOut.textContent = nameI.value.trim() || 'Your name'; });
+      expI.addEventListener('input', () => {
+        let v = expI.value.replace(/\D/g, '').slice(0, 4);
+        if (v.length > 2) v = v.slice(0, 2) + '/' + v.slice(2);
+        expI.value = v;
+        expOut.textContent = v || '••/••';
+      });
+    }
+
     node.addEventListener('click', (e) => {
-      if (e.target.closest('[data-step-next]')) go(step + 1);
-      if (e.target.closest('[data-step-prev]')) go(step - 1);
-      const dot = e.target.closest('[data-step-dot]');
-      if (dot) go(parseInt(dot.dataset.stepDot, 10));
-    });
-
-    /* ── live card ── */
-    const num = $('[data-cc-number]', node), nameI = $('[data-cc-name]', node), expI = $('[data-cc-exp]', node);
-    const brandOut = $('[data-card-brand]', node), numOut = $('[data-card-num]', node),
-          nameOut = $('[data-card-name]', node), expOut = $('[data-card-exp]', node);
-
-    num.addEventListener('input', () => {
-      const digits = num.value.replace(/\D/g, '').slice(0, 19);
-      num.value = digits.replace(/(.{4})/g, '$1 ').trim();
-      numOut.textContent = (num.value + ' •••• •••• •••• ••••').slice(0, 19);
-      const brand = CARD_BRANDS.find((b) => b.re.test(digits));
-      brandOut.textContent = brand ? brand.name : 'Card';
-      $('[data-paycard]', node).classList.toggle('is-known', !!brand);
-    });
-    nameI.addEventListener('input', () => { nameOut.textContent = nameI.value.trim() || 'Your name'; });
-    expI.addEventListener('input', () => {
-      let v = expI.value.replace(/\D/g, '').slice(0, 4);
-      if (v.length > 2) v = v.slice(0, 2) + '/' + v.slice(2);
-      expI.value = v;
-      expOut.textContent = v || '••/••';
-    });
-
-    $('[data-pay-submit]', node).addEventListener('click', () => {
-      const err = $('[data-pay-error]', node);
-      if (!luhn(num.value)) {
-        err.hidden = false;
-        if (ANIM) gsap.fromTo($('[data-paycard]', node), { x: -10 }, { x: 0, duration: 0.5, ease: 'elastic.out(1,0.3)' });
-        num.focus();
+      if (e.target.closest('[data-step-next]')) {
+        /* A card that fails a Luhn check should not reach the review step. */
+        if (state.step === 3) {
+          const num = $('[data-cc-number]', node), err = $('[data-pay-error]', node);
+          if (!luhn(num.value)) {
+            err.hidden = false;
+            if (ANIM) gsap.fromTo($('[data-paycard]', node), { x: -10 }, { x: 0, duration: 0.5, ease: 'elastic.out(1,0.3)' });
+            num.focus();
+            return;
+          }
+          err.hidden = true;
+          const rc = $('[data-review-card]', node);
+          if (rc) rc.textContent = 'Card ending ' + num.value.replace(/\D/g, '').slice(-4);
+        }
+        go(state.step + 1);
         return;
       }
-      err.hidden = true;
-      const btn = $('[data-pay-submit]', node);
-      btn.disabled = true;
-      btn.textContent = 'Authorising…';
-      setTimeout(() => {
-        try { localStorage.setItem('dysobay:lastOrder', JSON.stringify({ total, count: items.length, ids: items.map((p) => p.id) })); } catch (e) {}
-        store.write('bag', []);
-        window.location.href = 'confirmation.html';
-      }, 1100);
+      if (e.target.closest('[data-step-prev]')) { go(state.step - 1); return; }
+      const dot = e.target.closest('[data-step-dot]');
+      if (dot) { go(parseInt(dot.dataset.stepDot, 10)); return; }
+
+      if (e.target.closest('[data-express]')) {
+        toast('Express checkout is not wired up in the prototype');
+        return;
+      }
+
+      if (e.target.closest('[data-promo-apply]')) {
+        const field = $('[data-promo]', node), msg = $('[data-promo-msg]', node);
+        const code = field.value.trim().toUpperCase();
+        if (PROMOS[code]) {
+          state.promo = code; state.discount = PROMOS[code];
+          msg.textContent = `${code} applied — ${Math.round(state.discount * 100)}% off`;
+          msg.classList.remove('is-bad');
+          repaintSummary();
+        } else {
+          state.promo = null; state.discount = 0;
+          msg.textContent = code ? `${code} is not a code we issued.` : 'Try NOTMASS or MILAN26.';
+          msg.classList.add('is-bad');
+          repaintSummary();
+        }
+        if (ANIM) gsap.fromTo(msg, { y: -6, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35 });
+        return;
+      }
+
+      const payNow = e.target.closest('[data-pay-submit]');
+      if (payNow) {
+        payNow.disabled = true;
+        payNow.textContent = 'Authorising…';
+        setTimeout(() => {
+          try {
+            localStorage.setItem('dysobay:lastOrder', JSON.stringify({
+              total: total(), count: items.length, ids: items.map((p) => p.id),
+              ship: state.ship, gift: state.gift, promo: state.promo,
+            }));
+          } catch (err) { /* private mode */ }
+          store.write('bag', []);
+          window.location.href = 'confirmation.html';
+        }, 1100);
+      }
     });
+
+    node.addEventListener('change', (e) => {
+      const ship = e.target.closest('[data-ship]');
+      if (ship) {
+        state.ship = ship.value;
+        $$('.ship__opt', node).forEach((o) => o.classList.toggle('is-on', o.contains(ship)));
+        const rs = $('[data-review-ship]', node);
+        if (rs) rs.textContent = (SHIPPING.find((s) => s.id === state.ship) || SHIPPING[0]).name;
+        repaintSummary();
+        return;
+      }
+      const gift = e.target.closest('[data-gift]');
+      if (gift) {
+        state.gift = gift.checked;
+        const noteField = $('.gift__note', node);
+        if (noteField) noteField.hidden = !state.gift;
+        const rg = $('[data-review-gift]', node);
+        if (rg) rg.textContent = state.gift ? 'Wrapped, with a handwritten note' : 'No';
+        repaintSummary();
+      }
+    });
+
+    paint();
   }
 
   /* ═══════════════════════════  confirmation  ══════════════════ */
@@ -588,6 +812,17 @@
     if (e.target.closest('[data-open-search]')) { e.preventDefault(); searchOverlay.show(); }
   });
 
+  document.addEventListener('click', (e) => {
+    const add = e.target.closest('[data-add-bag]');
+    if (add && !add.disabled) {
+      /* site.js has already written to the store on this same click. */
+      setTimeout(() => { minibag.show(add.dataset.addBag); pulseBagCount(); }, 0);
+      return;
+    }
+    if (e.target.closest('[data-remove-bag]')) setTimeout(() => minibag.refresh(), 60);
+    if (e.target.closest('[data-open-bag]')) { e.preventDefault(); minibag.show(null); }
+  });
+
   window.DysobayShop = {
     mount(root) {
       $$('[data-render="toolbar"]', root).forEach(mountToolbar);
@@ -595,6 +830,6 @@
       $$('[data-render="checkout"]', root).forEach(mountCheckout);
       $$('[data-render="confirmation"]', root).forEach(mountConfirmation);
     },
-    lightbox, quickview, searchOverlay,
+    lightbox, quickview, searchOverlay, minibag,
   };
 })();
