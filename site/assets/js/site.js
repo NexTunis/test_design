@@ -1,11 +1,12 @@
 /* Dysobay storefront runtime.
  *
  *   1. Render the catalogue into each page's [data-render] hooks.
- *   2. Animate — GSAP + ScrollTrigger. Motion is SECTION-level: a section
- *      arrives once, as one composed move, then holds still. The only
- *      scroll-linked things on the page are the pinned hero and the pinned
- *      horizontal rail, both of which are deliberate full-section moments.
- *      Nothing drifts, skews or parallaxes per element while you scroll.
+ *   2. Animate — GSAP + ScrollTrigger. Motion is SECTION-level and ARRIVAL-only:
+ *      a section plays one composed entrance when you reach it, then holds
+ *      still. NOTHING on this site is scroll-linked — no pin, no scrub, no
+ *      parallax, no velocity skew — so the scroll never fights the finger and
+ *      never stalls waiting for a section to finish. What varies is which
+ *      entrance a section gets: see CHOREO.
  *   3. Navigate — Barba.js swaps the page container so the chrome never blinks.
  *
  * Everything degrades: with GSAP missing (or prefers-reduced-motion) nothing is
@@ -276,27 +277,28 @@
           scrollTrigger: { trigger: cl, start: 'top 78%', once: true } });
       });
 
-      /* Nearest-to-the-middle wins, so exactly one letter is lit at all times —
-         per-clause trigger windows leave gaps where none is current. */
+      /* Whichever clause is crossing the middle of the screen is the current
+         one, so exactly one letter is lit at all times. An IntersectionObserver
+         over a 10%-tall band does this off the main thread; the old version
+         measured all seven clauses on every scroll frame, which is a forced
+         layout per frame for a class toggle. */
       let current = -1;
-      const sync = () => {
-        const mid = window.innerHeight / 2;
-        let best = 0, bestDist = Infinity;
-        clauses.forEach((cl, i) => {
-          const r = cl.getBoundingClientRect();
-          const d = Math.abs(r.top + r.height / 2 - mid);
-          if (d < bestDist) { bestDist = d; best = i; }
-        });
-        if (best === current) return;
-        current = best;
-        clauses.forEach((cl, i) => cl.classList.toggle('is-on', i === best));
-        letters.forEach((b, i) => {
-          b.classList.toggle('is-on', i === best);
-          b.classList.toggle('is-read', i < best);
+      const setCurrent = (i) => {
+        if (i === current || i < 0) return;
+        current = i;
+        clauses.forEach((cl, n) => cl.classList.toggle('is-on', n === i));
+        letters.forEach((b, n) => {
+          b.classList.toggle('is-on', n === i);
+          b.classList.toggle('is-read', n < i);
         });
       };
-      ScrollTrigger.create({ trigger: node, start: 'top bottom', end: 'bottom top', onUpdate: sync, onRefresh: sync });
-      sync();
+      if ('IntersectionObserver' in window) {
+        const io = new IntersectionObserver((entries) => {
+          entries.forEach((en) => { if (en.isIntersecting) setCurrent(clauses.indexOf(en.target)); });
+        }, { rootMargin: '-45% 0px -45% 0px', threshold: 0 });
+        clauses.forEach((cl) => io.observe(cl));
+      }
+      setCurrent(0);
     },
 
     press(node) {
@@ -698,6 +700,74 @@
     el.dataset.splitDone = '1';
   }
 
+  /* ── section choreographies ──────────────────────────────────────────
+     Six entrances. A section plays exactly one of them, once, when it comes
+     into view; after that its contents are ordinary static DOM. Nothing here
+     is tied to scroll position, which is the whole point — the page moves at
+     the speed of the finger and the animation runs on its own clock beside it.
+
+     `copy` / `blocks` are the offsets text and whole components start from,
+     `frames` is how framed photography unmasks, `from` is the stagger origin.
+     Which section gets which is decided by what is inside it (choreoFor). */
+  const CHOREO = {
+    rise:    { copy: { y: 46 },  blocks: { y: 66 },              frames: 'up',   dur: 1.10, amount: 0.55 },
+    cascade: { copy: { y: 34 },  blocks: { y: 54, scale: 0.96 }, frames: 'up',   dur: 1.20, amount: 0.80, from: 'start' },
+    center:  { copy: { y: 26 },  blocks: { y: 20, scale: 0.90 }, frames: 'iris', dur: 1.00, amount: 0.50, from: 'center' },
+    sweep:   { copy: { x: -40 }, blocks: { x: -70 },             frames: 'left', dur: 1.05, amount: 0.65, from: 'start' },
+    unveil:  { copy: { y: 30 },  blocks: { y: 28 },              frames: 'left', dur: 1.35, amount: 0.70 },
+    lift:    { copy: { y: 58 },  blocks: { y: 96 },              frames: 'zoom', dur: 1.40, amount: 0.85, from: 'edges' },
+  };
+  const FRAME_FROM = {
+    up:   { clipPath: 'inset(0% 0% 100% 0%)' },
+    left: { clipPath: 'inset(0% 100% 0% 0%)' },
+    iris: { clipPath: 'inset(15% 15% 15% 15%)' },
+    zoom: { clipPath: 'inset(0% 0% 100% 0%)' },
+  };
+  const ROTATION = ['rise', 'unveil', 'cascade', 'lift', 'center', 'sweep'];
+  let choreoSeq = 0, lastChoreo = '';
+
+  function choreoFor(sec) {
+    if (sec.dataset.motion && CHOREO[sec.dataset.motion]) return sec.dataset.motion;
+    let key = '';
+    /* Content decides first: a horizontal row should arrive along its own axis,
+       a wall of photographs should unmask, a line of numbers should land from
+       the middle outwards. */
+    if (sec.classList.contains('rail')) key = 'sweep';
+    else if ($('.stat', sec)) key = 'center';
+    else if ($('.clause, .manifesto-row, .acc, .table, .bagline, .coline, .stockist', sec)) key = 'sweep';
+    else if ($$('.card, .look', sec).length >= 4) key = 'cascade';
+    else if ($$('figure.media, [data-reveal-media], a.media', sec).length >= 2) key = 'unveil';
+    else {
+      /* Otherwise rotate — skipping whatever the section above just used, so
+         two neighbours never arrive identically and read as one generic move. */
+      do { key = ROTATION[choreoSeq++ % ROTATION.length]; } while (key === lastChoreo);
+    }
+    lastChoreo = key;
+    sec.dataset.motion = key;
+    return key;
+  }
+
+  /* Phones get the same choreography at roughly a third of the travel and half
+     the duration: a 1.3s entrance cannot keep up with a thumb flick, and what
+     you see instead is a blank band where a section should be. */
+  const shrink = (o, fast) => {
+    if (!fast) return Object.assign({}, o);
+    const r = {};
+    /* Scale is dropped on phones, not merely reduced: scaling a card that
+       contains a photograph re-rasterises it every frame, and on a mid-range
+       phone that is the difference between a clean scroll and a fifth of the
+       frames running long. Translation is free by comparison. */
+    Object.keys(o).forEach((k) => { if (k !== 'scale') r[k] = o[k] * 0.4; });
+    return r;
+  };
+  const settled = (o, fast) => {
+    const r = {};
+    Object.keys(o).forEach((k) => {
+      if (k === 'scale') { if (!fast) r[k] = 1; } else r[k] = 0;
+    });
+    return r;
+  };
+
   /* One trigger per section. Everything inside arrives together, once, and
      then sits still — no per-element parallax and no velocity skew, which is
      what made cards wobble independently of each other while scrolling. */
@@ -721,34 +791,64 @@
     const copy = $$('[data-rise], .eyebrow, .display, .h1, .h2, .h3, .h4, .lede, .brush, .btn, .link-underline, .filters, .refine, .table, .acc', sec)
       .filter((el) => !inBlock(el) && !el.closest('[data-split]'));
 
-    /* A phone gets the same choreography at roughly a third of the duration and
-       with no clip-path masking. A 1.25s unmask cannot keep up with a thumb
-       flick — you scroll past a section faster than it can finish arriving, and
-       what you see is a blank band. Shorter, and starting earlier, fixes it. */
+    const C = CHOREO[choreoFor(sec)];
     const fast = isPhone();
+    const from = C.from || 'start';
+    const dur = fast ? 0.48 : C.dur;
+    const amount = (n, cap) => Math.min(fast ? 0.22 : Math.min(C.amount, cap), n * (fast ? 0.04 : 0.08));
+
+    /* start: 'top 88%' — a section begins arriving as its top crosses the last
+       eighth of the viewport, so it is already settled by the time you read it.
+       Phones start later and finish sooner because they scroll faster. */
     const tl = gsap.timeline(
-      immediate ? {} : { scrollTrigger: { trigger: sec, start: fast ? 'top 97%' : 'top 82%', once: true } }
+      immediate ? {} : { scrollTrigger: { trigger: sec, start: fast ? 'top 97%' : 'top 88%', once: true } }
     );
 
     if (chars.length) tl.fromTo(chars, { yPercent: fast ? 60 : 116, opacity: 0 },
-      { yPercent: 0, opacity: 1, duration: fast ? 0.5 : 1.1, ease: 'expo.out',
+      { yPercent: 0, opacity: 1, duration: fast ? 0.5 : dur, ease: 'expo.out',
         stagger: { amount: fast ? 0.2 : 0.45 } }, 0);
-    if (copy.length) tl.fromTo(copy, { y: fast ? 20 : 46, opacity: 0 },
-      { y: 0, opacity: 1, duration: fast ? 0.45 : 1.1, ease: 'expo.out', stagger: fast ? 0.03 : 0.06 }, 0.04);
-    if (blocks.length) tl.fromTo(blocks, { y: fast ? 26 : 64, opacity: 0 },
-      { y: 0, opacity: 1, duration: fast ? 0.5 : 1.15, ease: 'expo.out',
-        stagger: { amount: Math.min(fast ? 0.22 : 0.55, blocks.length * 0.07) } }, fast ? 0.02 : 0.1);
+    if (copy.length) tl.fromTo(copy, Object.assign({ opacity: 0 }, shrink(C.copy, fast)),
+      Object.assign({ opacity: 1, duration: dur * 0.92, ease: 'expo.out',
+        stagger: { amount: amount(copy.length, 0.5), from } }, settled(C.copy, fast)), 0.04);
+    if (blocks.length) tl.fromTo(blocks, Object.assign({ opacity: 0 }, shrink(C.blocks, fast)),
+      Object.assign({ opacity: 1, duration: dur * 1.04, ease: 'expo.out',
+        stagger: { amount: amount(blocks.length, C.amount), from } }, settled(C.blocks, fast)), fast ? 0.02 : 0.1);
+
+    const inners = [];
     if (frames.length) {
       /* The stylesheet clips every frame to zero height as its base state. The
          phone path fades rather than unmasking, so it MUST clear that clip
          itself — animating opacity alone left every photograph on every phone
          invisible, which is not a slow connection, it is a blank site. */
-      if (fast) tl.fromTo(frames, { opacity: 0, clipPath: 'inset(0% 0% 0% 0%)' },
-        { opacity: 1, clipPath: 'inset(0% 0% 0% 0%)', duration: 0.4, ease: 'power2.out', stagger: { amount: 0.18 } }, 0.02);
-      else tl.fromTo(frames, { clipPath: 'inset(0% 0% 100% 0%)' },
-        { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.25, ease: 'expo.out',
-          stagger: { amount: Math.min(0.5, frames.length * 0.06) } }, 0.12);
+      if (fast) {
+        tl.fromTo(frames, { opacity: 0, clipPath: 'inset(0% 0% 0% 0%)' },
+          { opacity: 1, clipPath: 'inset(0% 0% 0% 0%)', duration: 0.4, ease: 'power2.out',
+            stagger: { amount: 0.18, from } }, 0.02);
+      } else {
+        tl.fromTo(frames, FRAME_FROM[C.frames],
+          { clipPath: 'inset(0% 0% 0% 0%)', duration: dur * 1.1, ease: 'expo.out',
+            stagger: { amount: amount(frames.length, 0.6), from } }, 0.12);
+        /* Two of the six push the photograph itself: the frame opens while the
+           image inside settles back from an overscale. .media is overflow:hidden,
+           so this reads as the crop tightening, not as an element moving. */
+        if (C.frames === 'zoom' || C.frames === 'iris') {
+          frames.forEach((f) => { const m = $('img, video', f); if (m) inners.push(m); });
+          if (inners.length) tl.fromTo(inners, { scale: 1.14 },
+            { scale: 1, duration: dur * 1.25, ease: 'expo.out',
+              stagger: { amount: amount(inners.length, 0.6), from } }, 0.12);
+        }
+      }
     }
+
+    /* Marks the section as arrived so the stylesheet holds its contents visible
+       without depending on the inline styles the tween left behind — one class
+       per section, and nothing is ever stuck invisible if a tween is cut short.
+       Those inline styles are deliberately NOT cleared: stripping them costs an
+       extra style recalculation and layout for every element in the section
+       (measured: index went from 93 layouts to 164 over the same scroll), and
+       buys nothing, because GSAP has already dropped back to a 2D transform and
+       released the compositor layer by the time it completes. */
+    tl.eventCallback('onComplete', () => { sec.classList.add('is-revealed'); });
 
     return tl;
   }
@@ -796,7 +896,6 @@
     });
 
     initMagnetic(R);
-    initRails(R);
   }
 
   /* Buttons lean toward the cursor. */
@@ -816,49 +915,49 @@
     });
   }
 
-  /* Pinned horizontal rail — desktop only, and scoped through gsap.matchMedia
-     so the pin is CREATED above the breakpoint and REVERTED below it. Checking
-     a breakpoint once at mount (what this used to do) meant a phone that had
-     ever been wider — a rotation, a resized window — kept a pin it should not
-     have, and a pin nobody scrolls is a screen-and-a-half of blank page. */
-  let railMM = null;
+  /* Horizontal rail. It used to be pinned and scrubbed: the page froze while
+     the row slid past, which is the single most intrusive thing a site can do
+     to a scroll. It is now an ordinary overflow-x row at every width — a swipe
+     on a phone, a drag or a trackpad flick on a desktop — and the only motion
+     it has is the same arrival stagger as everything else, running left to
+     right along its own axis. */
   function initRails(root) {
-    if (!ANIM) return;
-    const sections = $$('[data-hscroll]', root).filter((s) => !s.dataset.railed);
-    if (!sections.length) return;
-    sections.forEach((s) => { s.dataset.railed = '1'; });
+    $$('[data-hscroll]', root).forEach((section) => {
+      if (section.dataset.railed) return;
+      section.dataset.railed = '1';
+      section.classList.add('rail--swipe');
+      const track = $('[data-hscroll-track]', section);
+      if (!track) return;
+      if (gsap) gsap.set(track, { clearProps: 'transform' });
 
-    railMM = gsap.matchMedia();
-    railMM.add('(min-width: 861px)', () => {
-      const tweens = sections.map((section) => {
-        const track = $('[data-hscroll-track]', section);
-        if (!track) return null;
-        section.classList.remove('rail--swipe');
-        const distance = () => Math.max(0, track.scrollWidth - window.innerWidth + 64);
-        return gsap.to(track, {
-          x: () => -distance(), ease: 'none',
-          scrollTrigger: {
-            trigger: section, start: 'top top', end: () => '+=' + (distance() + window.innerHeight * 0.4),
-            pin: true, scrub: 0.8, anticipatePin: 1, invalidateOnRefresh: true,
-          },
-        });
-      }).filter(Boolean);
-      /* matchMedia reverts these — and their pin-spacers — on the way out. */
-      return () => tweens.forEach((tw) => tw.kill());
-    });
-
-    railMM.add('(max-width: 860px)', () => {
-      sections.forEach((s) => {
-        s.classList.add('rail--swipe');
-        const track = $('[data-hscroll-track]', s);
-        if (track) gsap.set(track, { clearProps: 'transform' });
+      /* Pointer drag, on top of the native scroll — a mouse has no swipe. */
+      let down = false, startX = 0, startLeft = 0, moved = 0;
+      track.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'touch' || e.button !== 0) return;
+        down = true; moved = 0; startX = e.clientX; startLeft = track.scrollLeft;
+        track.classList.add('is-dragging');
       });
-      return () => sections.forEach((s) => s.classList.remove('rail--swipe'));
+      track.addEventListener('pointermove', (e) => {
+        if (!down) return;
+        const dx = e.clientX - startX;
+        moved = Math.max(moved, Math.abs(dx));
+        track.scrollLeft = startLeft - dx;
+      });
+      const release = () => { down = false; track.classList.remove('is-dragging'); };
+      track.addEventListener('pointerup', release);
+      track.addEventListener('pointercancel', release);
+      track.addEventListener('pointerleave', release);
+      /* A drag that travelled must not also open the card it finished on. */
+      track.addEventListener('click', (e) => {
+        if (moved > 6) { e.preventDefault(); e.stopPropagation(); moved = 0; }
+      }, true);
     });
   }
 
-  /* Hero: pinned, the film scales down and clips into a frame while the
-     type climbs out of view. This is the first thing anyone sees. */
+  /* Hero: the film settles out of an overscale and the type climbs in, once,
+     on load. It used to be pinned and scrubbed — the page held still for a
+     screen and a half while the crop tightened, which is exactly the scroll
+     hijack this site no longer does. */
   /* Safari lists no support for VP9 and some browsers refuse autoplay outright
      (low-power mode, data saver). Either way the hero must not freeze on a
      poster frame — fall back to the animated GIF, which always moves. */
@@ -897,31 +996,20 @@
     if (!hero || !ANIM) return;
     const media = $('.hero__media', hero);
     const film = $('.hero__film', hero);
-    const body = $('.hero__body', hero);
 
     /* The intro runs on the media element INSIDE .hero__film, never on
-       .hero__film itself. They used to share `scale`: ScrollTrigger.refresh()
-       (fired once images finish loading) re-recorded the scrubbed timeline's
-       start while the 2s intro was mid-flight, captured 1.5 as the resting
-       scale, and locked the hero at 1.5x — a giant crop that never resolved. */
+       .hero__film itself — .hero__film carries the layout, and animating both
+       used to leave the crop locked at 1.5x when a refresh landed mid-flight. */
     const inner = $('video, img', film) || film;
-    gsap.fromTo(inner, { scale: 1.35, filter: 'blur(16px)' },
-      { scale: 1, filter: 'blur(0px)', duration: 2, ease: 'expo.out' });
-    gsap.fromTo($$('.hero__body > *', hero), { y: 80, opacity: 0 },
-      { y: 0, opacity: 1, duration: 1.3, ease: 'expo.out', stagger: 0.1, delay: 0.2 });
-    gsap.fromTo($('.hero__scroll', hero), { opacity: 0 }, { opacity: 1, duration: 0.8, delay: 1.4 });
-
-    /* Desktop-only, and scoped the same way so a rotation cannot strand a pin. */
-    gsap.matchMedia().add('(min-width: 861px)', () => {
-      const tl = gsap.timeline({
-        scrollTrigger: { trigger: hero, start: 'top top', end: '+=' + Math.round(window.innerHeight * 1.15),
-          pin: true, scrub: 0.7, anticipatePin: 1, invalidateOnRefresh: true },
-      });
-      tl.fromTo(media, { clipPath: 'inset(0% 0% 0% 0%)' }, { clipPath: 'inset(12% 14% 12% 14%)', ease: 'none', immediateRender: false }, 0)
-        .fromTo(film, { scale: 1 }, { scale: 1.18, ease: 'none', immediateRender: false }, 0)
-        .fromTo(body, { yPercent: 0, opacity: 1 }, { yPercent: -70, opacity: 0, ease: 'none', immediateRender: false }, 0)
-        .to($('.hero__scroll', hero), { opacity: 0, ease: 'none' }, 0);
-      return () => tl.kill();
+    const tl = gsap.timeline();
+    tl.fromTo(inner, { scale: 1.35, filter: 'blur(16px)' },
+      { scale: 1, filter: 'blur(0px)', duration: 2, ease: 'expo.out' }, 0);
+    tl.fromTo($$('.hero__body > *', hero), { y: 80, opacity: 0 },
+      { y: 0, opacity: 1, duration: 1.3, ease: 'expo.out', stagger: 0.1 }, 0.2);
+    tl.fromTo($('.hero__scroll', hero), { opacity: 0 }, { opacity: 1, duration: 0.8 }, 1.4);
+    tl.eventCallback('onComplete', () => {
+      if (media) gsap.set(media, { clearProps: 'clipPath' });
+      gsap.set(inner, { clearProps: 'filter,willChange' });
     });
   }
 
@@ -961,21 +1049,38 @@
 
   let lastScroll = 0;
   let progressSetter = null;
+  let ticking = false;
+  /* Measured once per page and per resize, never per scroll event. Reading
+     offsetHeight and scrollHeight inside the scroll handler forces a layout on
+     every single frame you scroll, which is a cost the eye reads as stutter
+     long before any animation is to blame. */
+  let heroHeight = 0, scrollMax = 1;
+  function measure() {
+    const hero = $('.hero');
+    heroHeight = hero ? hero.offsetHeight : 0;
+    scrollMax = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+  }
 
-  function onScroll() {
+  function paintScroll() {
+    ticking = false;
     const y = window.scrollY;
 
-    const hero = $('.hero');
     if (nav) {
-      const overHero = !!hero && y < hero.offsetHeight * 0.55;
+      const overHero = heroHeight > 0 && y < heroHeight * 0.55;
       nav.classList.toggle('is-over-hero', overHero);
       nav.classList.toggle('is-hidden', !overHero && y > 240 && y > lastScroll);
     }
     lastScroll = y;
 
-    const max = document.documentElement.scrollHeight - window.innerHeight;
-    const pct = max > 0 ? y / max : 0;
+    const pct = Math.min(1, y / scrollMax);
     if (progressSetter) progressSetter(pct); else progress.style.transform = 'scaleX(' + pct + ')';
+  }
+
+  /* One paint per frame at most, whatever the scroll event rate. */
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(paintScroll);
   }
 
   function setActiveNav() {
@@ -1059,6 +1164,9 @@
     wireMobileNav();
     if (window.DysobayShop) window.DysobayShop.mount(root);
     marqueeAnimation(root);
+    /* Outside animateIn: a rail must be scrollable even when motion is off,
+       and animateIn returns early in that case. */
+    initRails(root);
     guardHeroFilm(root);
     heroAnimation(root);
     animateIn(root);
@@ -1066,18 +1174,22 @@
     if (ANIM) {
       progressSetter = gsap.quickSetter(progress, 'scaleX');
     }
-    onScroll();
+    measure();
+    paintScroll();
 
     if (ANIM) {
+      /* Images finishing late move every trigger below them, so re-measure
+         when they land rather than trusting the first-paint geometry. */
+      const settle = () => { measure(); ScrollTrigger.refresh(); };
       const imgs = $$('img', root).filter((i) => !i.complete);
       let pending = imgs.length;
-      if (!pending) ScrollTrigger.refresh();
+      if (!pending) settle();
       imgs.forEach((img) => {
-        const done = () => { if (--pending <= 0) ScrollTrigger.refresh(); };
+        const done = () => { if (--pending <= 0) settle(); };
         img.addEventListener('load', done, { once: true });
         img.addEventListener('error', done, { once: true });
       });
-      setTimeout(() => ScrollTrigger.refresh(), 1400);
+      setTimeout(settle, 1400);
     }
   }
 
@@ -1090,7 +1202,7 @@
   }
 
   window.addEventListener('scroll', onScroll, { passive: true });
-  window.addEventListener('resize', () => { if (ANIM) ScrollTrigger.refresh(); }, { passive: true });
+  window.addEventListener('resize', () => { measure(); if (ANIM) ScrollTrigger.refresh(); }, { passive: true });
 
   /* ═══════════════════════════  barba  ══════════════════════════ */
 

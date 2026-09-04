@@ -271,10 +271,26 @@ button { font: inherit; color: inherit; }
 .card__price { display: block; font-size: var(--text-body-sm); white-space: nowrap; }
 .card__sub { display: block; font-size: var(--text-caption); letter-spacing: var(--tracking-wide); text-transform: uppercase; color: var(--stone); margin-top: var(--space-1); }
 
-/* ─────────────────────  pinned horizontal rail  ─────────────────── */
-.rail { overflow: hidden; padding-block: var(--space-8); }
-.rail__track { display: flex; gap: var(--space-5); padding-inline: var(--space-7); width: max-content; will-change: transform; }
-.rail__item { flex: 0 0 clamp(240px, 26vw, 420px); }
+/* ─────────────────────  horizontal rail  ────────────────────────── */
+/* A real scroll container at every width — never pinned, never transformed.
+   The base state is scrollable so the row works with the script absent too. */
+.rail { padding-block: var(--space-8); }
+.rail__track {
+  display: flex; gap: var(--space-5); padding-inline: var(--space-7);
+  overflow-x: auto; -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory;
+  padding-bottom: var(--space-3); scrollbar-width: thin;
+  /* Without this the browser snaps the first card flush to the scrollport and
+     scrolls straight past the track's own left padding, so the row starts
+     hard against the window edge while its heading is indented. */
+  scroll-padding-inline: var(--space-7);
+}
+.rail__item { flex: 0 0 clamp(240px, 26vw, 420px); scroll-snap-align: start; }
+@media (min-width: 861px) {
+  .rail__track { cursor: grab; scroll-snap-type: x proximity; }
+  .rail__track.is-dragging { cursor: grabbing; scroll-snap-type: none; }
+  /* A drag that ends on a card must not open it. */
+  .rail__track.is-dragging a { pointer-events: none; }
+}
 .rail__cap {
   position: absolute; z-index: 2; left: var(--space-3); bottom: var(--space-3); color: var(--paper);
   font-size: var(--text-caption); letter-spacing: var(--tracking-wide); text-transform: uppercase;
@@ -458,6 +474,13 @@ button { font: inherit; color: inherit; }
 .js-anim [data-reveal-media] { clip-path: inset(0% 0% 100% 0%); }
 .js-anim [data-curtain] { clip-path: inset(0% 50% 0% 50%); }
 .js-anim [data-split] .ch { opacity: 0; }
+/* Once a section has arrived, the stylesheet holds it visible on its own. That
+   lets the script drop every inline transform it wrote, so a page you have
+   already scrolled past is not still carrying a compositor layer per card. */
+.js-anim .is-revealed [data-reveal],
+.js-anim .is-revealed [data-stagger],
+.js-anim .is-revealed [data-split] .ch { opacity: 1; }
+.js-anim .is-revealed [data-reveal-media] { clip-path: none; }
 .js-anim .hero__body > * { opacity: 0; }
 .js-anim .hero__scroll { opacity: 0; }
 
@@ -508,6 +531,7 @@ button { font: inherit; color: inherit; }
   .hero__scroll { display: none; }
   .kitstrip { grid-template-columns: repeat(2, 1fr); }
   .rail__track, .rail__head { padding-inline: var(--space-5); }
+  .rail__track { scroll-padding-inline: var(--space-5); }
   .pdp__specrow { grid-template-columns: 1fr; gap: var(--space-1); }
 }
 @media (max-width: 560px) {
