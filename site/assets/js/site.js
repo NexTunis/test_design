@@ -724,6 +724,13 @@
     zoom: { clipPath: 'inset(0% 0% 100% 0%)' },
   };
   const ROTATION = ['rise', 'unveil', 'cascade', 'lift', 'center', 'sweep'];
+  /* Which choreographies take a section title apart letter by letter. The other
+     three light it instead — see the title handling in revealSection. */
+  const STRONG = ['rise', 'cascade', 'lift'];
+  /* Clipping a background to the text is what makes the light readable as a
+     light. Where it is unsupported the title simply arrives without one. */
+  const SHEEN_OK = !!(window.CSS && CSS.supports &&
+    (CSS.supports('-webkit-background-clip', 'text') || CSS.supports('background-clip', 'text')));
   let choreoSeq = 0, lastChoreo = '';
 
   function choreoFor(sec) {
@@ -775,23 +782,50 @@
     if (sec.dataset.revealed) return;
     sec.dataset.revealed = '1';
 
-    $$('[data-split]', sec).forEach(splitChars);
-    const chars = $$('[data-split] .ch', sec);
     /* Blocks move as whole units: a card is one thing, not a photo plus a price. */
     /* [data-reveal] / [data-stagger] MUST be in this list: the stylesheet hides
        them at opacity 0, so anything the reveal misses stays invisible for
        good — that is what took out the contact form and the wishlist. */
     const blocks = $$('.card, .stat, .service, .season, .press, .stockist, .manifesto-row, .bagline, .coline, .clause, .sociallink, [data-block], [data-reveal], [data-stagger]', sec);
     const inBlock = (el) => blocks.some((b) => b !== el && b.contains(el));
+
+    const C = CHOREO[choreoFor(sec)];
+    const key = sec.dataset.motion;
+
+    /* The section's own title — the heading that names it, not a heading that
+       belongs to a card or a row inside it. Every section has one and every one
+       of them arrives on its own terms: either STRONG (split apart and climbing
+       in letter by letter) or LIGHT (a sheen travelling across the words). Which
+       one follows the section's choreography, so the two alternate down a page
+       instead of one shape repeating. Keying it on whether the heading sat
+       inside a moving block instead gave the homepage eight sheens and one
+       split — nesting a character tween inside a block that is also arriving
+       composes perfectly well, they are both entrances and both end at rest. */
+    const title = $$('.display, .h1, .h2, .h3', sec).filter((h) => !h.closest('[data-split]'))
+      .find((h) => !h.closest('.card, .clause, .bagline, .coline, .service, .press, .stockist, .season, .look'));
+    let sheen = null;
+    if (title) {
+      if (STRONG.indexOf(key) >= 0 && !title.children.length) title.setAttribute('data-split', '');
+      else sheen = title;
+    }
+
+    $$('[data-split]', sec).forEach(splitChars);
+    const chars = $$('[data-split] .ch', sec);
     /* Only the slider is excluded — it is already in motion. Frames nested
        inside a block still unmask: the block animates y, the frame animates
        clip-path, so they are not competing for anything. */
-    const frames = $$('[data-reveal-media], figure.media, a.media', sec)
+    /* `.media` with no tag qualifier on purpose: the same frame is rendered as a
+       figure, an anchor and a span in different places, and the old
+       `figure.media, a.media` quietly left every span one — the whole checkout
+       summary — with no arrival of its own. */
+    const frames = $$('[data-reveal-media], .media, .card__media', sec)
       .filter((el) => !el.closest('.slider'));
+    /* Anything left: a bare photograph with no frame around it to unmask. */
+    const loose = $$('img', sec)
+      .filter((im) => !im.closest('[data-reveal-media], .media, .card__media, .slider, .hero'));
     const copy = $$('[data-rise], .eyebrow, .display, .h1, .h2, .h3, .h4, .lede, .brush, .btn, .link-underline, .filters, .refine, .table, .acc', sec)
       .filter((el) => !inBlock(el) && !el.closest('[data-split]'));
 
-    const C = CHOREO[choreoFor(sec)];
     const fast = isPhone();
     const from = C.from || 'start';
     const dur = fast ? 0.48 : C.dur;
@@ -838,6 +872,31 @@
               stagger: { amount: amount(inners.length, 0.6), from } }, 0.12);
         }
       }
+    }
+
+    /* A photograph with no frame to unmask still arrives — it lifts out of a
+       slight overscale instead, so nothing on the page simply appears. */
+    loose.forEach((im) => { im.dataset.loose = '1'; });
+    if (loose.length) tl.fromTo(loose, { opacity: 0, scale: fast ? 1 : 1.06 },
+      { opacity: 1, scale: 1, duration: dur * 0.9, ease: 'expo.out',
+        stagger: { amount: amount(loose.length, 0.4), from } }, 0.08);
+
+    /* The light. One pass across the words of the title, warm, once. Applied by
+       the script and taken off again the instant it finishes: the effect needs
+       transparent text fill to work, and text that depends on a background to be
+       readable is one unsupported property away from an empty heading. */
+    if (sheen && SHEEN_OK) {
+      sheen.dataset.sheened = '1';
+      tl.fromTo(sheen, { '--sheen': '96%' },
+        { '--sheen': '4%', duration: fast ? 1 : 1.5, ease: 'power2.inOut',
+          /* The class goes on when the sweep STARTS, not when the timeline is
+             built — a scroll-triggered timeline is built long before you reach
+             it, and every unread title on the page would be sitting in a
+             gradient waiting its turn. */
+          immediateRender: false,
+          onStart: () => { sheen.classList.add('is-sheen'); },
+          onComplete: () => { sheen.classList.remove('is-sheen'); gsap.set(sheen, { clearProps: '--sheen' }); } },
+        fast ? 0.1 : 0.3);
     }
 
     /* Marks the section as arrived so the stylesheet holds its contents visible
@@ -935,12 +994,15 @@
       track.addEventListener('pointerdown', (e) => {
         if (e.pointerType === 'touch' || e.button !== 0) return;
         down = true; moved = 0; startX = e.clientX; startLeft = track.scrollLeft;
-        track.classList.add('is-dragging');
       });
       track.addEventListener('pointermove', (e) => {
         if (!down) return;
         const dx = e.clientX - startX;
         moved = Math.max(moved, Math.abs(dx));
+        /* Only once it is genuinely a drag. Marking it on pointerdown killed
+           pointer events on the cards immediately, so the mouseup landed on the
+           track instead of the link and an ordinary click opened nothing. */
+        if (moved > 6) track.classList.add('is-dragging');
         track.scrollLeft = startLeft - dx;
       });
       const release = () => { down = false; track.classList.remove('is-dragging'); };

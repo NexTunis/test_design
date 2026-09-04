@@ -86,7 +86,10 @@ button { font: inherit; color: inherit; }
 /* Character masks for the headline reveal. */
 .word { display: inline-block; white-space: nowrap; }
 .ch__mask { display: inline-block; overflow: hidden; vertical-align: bottom; }
-.ch { display: inline-block; will-change: transform; }
+/* No will-change: a split title can be dozens of characters, and pinning a
+   compositor layer per letter for the life of the page costs more than the
+   one entrance it would smooth. GSAP promotes them while it animates. */
+.ch { display: inline-block; }
 
 /* ─────────────────────────────  buttons  ─────────────────────────── */
 .btn {
@@ -287,7 +290,8 @@ button { font: inherit; color: inherit; }
 .rail__item { flex: 0 0 clamp(240px, 26vw, 420px); scroll-snap-align: start; }
 @media (min-width: 861px) {
   .rail__track { cursor: grab; scroll-snap-type: x proximity; }
-  .rail__track.is-dragging { cursor: grabbing; scroll-snap-type: none; }
+  .rail__track:active { cursor: grabbing; }
+  .rail__track.is-dragging { scroll-snap-type: none; }
   /* A drag that ends on a card must not open it. */
   .rail__track.is-dragging a { pointer-events: none; }
 }
@@ -469,6 +473,25 @@ button { font: inherit; color: inherit; }
 /* Opacity and clip-path only. Every transform is owned by GSAP via fromTo —
    a CSS transform start value gets resolved to pixels and then fights the
    tween's own units, which is how a "reveal" ends up stuck off-screen. */
+/* The light that crosses a section title as it arrives. Only ever added by the
+   script, and removed again the moment the sweep ends — while it is on, the
+   text is painted by the gradient, so it must never be the resting state. */
+/* The sweep range is 96% -> 4% and nothing outside it. Background percentages
+   position the IMAGE against the BOX, so with background-size: 300% the offset
+   is (W - 3W) * p: only p in 0..1 keeps the gradient over the element at all.
+   A value like 190% puts it 3.8 widths to the left, the box paints nothing, and
+   because the fill is transparent the heading is simply not there. */
+.is-sheen {
+  background-image: linear-gradient(100deg,
+    currentColor 42%, var(--clay) 50%, currentColor 58%);
+  background-size: 300% 100%;
+  background-repeat: no-repeat;
+  background-position: var(--sheen, 96%) 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
 .js-anim [data-reveal],
 .js-anim [data-stagger] { opacity: 0; }
 .js-anim [data-reveal-media] { clip-path: inset(0% 0% 100% 0%); }
